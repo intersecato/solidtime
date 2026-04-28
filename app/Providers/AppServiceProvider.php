@@ -29,6 +29,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -47,6 +48,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $exceptionsComponentsPath = base_path('vendor/laravel/framework/src/Illuminate/Foundation/resources/exceptions/components');
+        if (is_dir($exceptionsComponentsPath)) {
+            Blade::anonymousComponentPath($exceptionsComponentsPath, 'laravel-exceptions-renderer');
+        }
+
         if ($this->app->environment('local')) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);
