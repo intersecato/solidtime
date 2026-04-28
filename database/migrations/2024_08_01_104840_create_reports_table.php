@@ -19,7 +19,11 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->boolean('is_public')->default(false)->index();
             $table->string('share_secret', 40)->nullable()->index()->unique();
-            $table->jsonb('properties');
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                $table->json('properties');
+            } else {
+                $table->jsonb('properties');
+            }
             $table->dateTime('public_until')->nullable();
             $table->uuid('organization_id');
             $table->foreign('organization_id')

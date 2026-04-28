@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Database\Sql;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -43,7 +44,11 @@ class HealthCheckController extends Controller
         $secure = $request->secure();
         $isTrustedProxy = $request->isFromTrustedProxy();
 
-        $dbTimezone = DB::select('show timezone;');
+        $dbTimezone = match (Sql::driver()) {
+            'mysql' => DB::select('select @@session.time_zone as TimeZone;'),
+            'pgsql' => DB::select('show timezone;'),
+            default => [(object) ['TimeZone' => 'UTC']],
+        };
 
         $response = [
             'ip_address' => $ipAddress,

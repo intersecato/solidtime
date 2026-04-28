@@ -44,7 +44,11 @@ return new class extends Migration
                 ->on('tasks')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-            $table->jsonb('tags')->nullable();
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                $table->json('tags')->nullable();
+            } else {
+                $table->jsonb('tags')->nullable();
+            }
             $table->timestamps();
 
             $table->index('start');

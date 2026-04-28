@@ -14,6 +14,7 @@ use App\Models\Tag;
 use App\Models\Task;
 use App\Models\TimeEntry;
 use App\Models\User;
+use App\Support\Database\Sql;
 use Carbon\CarbonTimeZone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -54,13 +55,22 @@ class TimeEntryAggregationService
         $groupBy = null;
         // If any grouping is by tag, expand rows per tag and ensure a NULL row for entries without tags
         if (($group1Type === TimeEntryAggregationType::Tag) || ($group2Type === TimeEntryAggregationType::Tag)) {
-            $timeEntriesQuery->crossJoin(DB::raw(
-                "LATERAL (\n".
-                "  SELECT jsonb_array_elements_text(coalesce(tags, '[]'::jsonb)) AS tag\n".
-                "  UNION ALL\n".
-                "  SELECT ''::text AS tag WHERE coalesce(jsonb_array_length(tags), 0) = 0\n".
-                ') AS tag(tag)'
-            ));
+            if (Sql::isMySql()) {
+                $timeEntriesQuery->leftJoin(
+                    DB::raw("JSON_TABLE(coalesce(tags, json_array()), '$[*]' COLUMNS (tag varchar(36) PATH '$')) AS tag_values"),
+                    DB::raw('true'),
+                    '=',
+                    DB::raw('true')
+                );
+            } else {
+                $timeEntriesQuery->crossJoin(DB::raw(
+                    "LATERAL (\n".
+                    "  SELECT jsonb_array_elements_text(coalesce(tags, '[]'::jsonb)) AS tag\n".
+                    "  UNION ALL\n".
+                    "  SELECT ''::text AS tag WHERE coalesce(jsonb_array_length(tags), 0) = 0\n".
+                    ') AS tag(tag)'
+                ));
+            }
         }
         if ($group1Type !== null) {
             $group1Select = $this->getGroupByQuery($group1Type, $timezone, $startOfWeek);
@@ -73,12 +83,13 @@ class TimeEntryAggregationService
 
         $startRawSelect = app(TimeEntryService::class)->getStartSelectRawForRounding($roundingType, $roundingMinutes);
         $endRawSelect = app(TimeEntryService::class)->getEndSelectRawForRounding($roundingType, $roundingMinutes);
+        $durationSelect = Sql::durationInSeconds($startRawSelect, $endRawSelect);
 
         $timeEntriesQuery->selectRaw(
             ($group1Select !== null ? $group1Select.' as group_1,' : '').
             ($group2Select !== null ? $group2Select.' as group_2,' : '').
-            ' round(sum(extract(epoch from ('.$endRawSelect.' - '.$startRawSelect.')))) as aggregate,'.
-            ' round(sum(extract(epoch from ('.$endRawSelect.' - '.$startRawSelect.')) * (coalesce(billable_rate, 0)::float/60/60))) as cost'
+            ' round(sum('.$durationSelect.')) as aggregate,'.
+            ' '.Sql::sumBillableCost($durationSelect).' as cost'
         );
         if ($groupBy !== null) {
             $timeEntriesQuery->groupBy($groupBy);
@@ -105,8 +116,8 @@ class TimeEntryAggregationService
                 $baseTotalsPerGroup1 = $baseTotalsPerGroup1Query
                     ->selectRaw(
                         $group1Select.' as group_1,'.
-                        ' round(sum(extract(epoch from ('.$endRawSelect.' - '.$startRawSelect.')))) as aggregate,'.
-                        ' round(sum(extract(epoch from ('.$endRawSelect.' - '.$startRawSelect.')) * (coalesce(billable_rate, 0)::float/60/60))) as cost'
+                        ' round(sum('.$durationSelect.')) as aggregate,'.
+                        ' '.Sql::sumBillableCost($durationSelect).' as cost'
                     )
                     ->groupBy('group_1')
                     ->get();
@@ -169,8 +180,8 @@ class TimeEntryAggregationService
                 // Reset selects and ordering on the cloned base query
                 $baseTotals = $baseTotalsQuery
                     ->selectRaw(
-                        ' round(sum(extract(epoch from ('.$endRawSelect.' - '.$startRawSelect.')))) as aggregate,'.
-                        ' round(sum(extract(epoch from ('.$endRawSelect.' - '.$startRawSelect.')) * (coalesce(billable_rate, 0)::float/60/60))) as cost'
+                        ' round(sum('.$durationSelect.')) as aggregate,'.
+                        ' '.Sql::sumBillableCost($durationSelect).' as cost'
                     )
                     ->first();
                 if ($baseTotals !== null) {
@@ -478,22 +489,16 @@ class TimeEntryAggregationService
     private function getGroupByQuery(TimeEntryAggregationType $group, string $timezone, Weekday $startOfWeek): string
     {
         $timezoneShift = app(TimezoneService::class)->getShiftFromUtc(new CarbonTimeZone($timezone));
-        if ($timezoneShift > 0) {
-            $dateWithTimeZone = 'start + INTERVAL \''.$timezoneShift.' second\'';
-        } elseif ($timezoneShift < 0) {
-            $dateWithTimeZone = 'start - INTERVAL \''.abs($timezoneShift).' second\'';
-        } else {
-            $dateWithTimeZone = 'start';
-        }
+        $dateWithTimeZone = Sql::dateWithTimezoneShift('start', $timezoneShift);
         $startOfWeek = Carbon::now()->setTimezone($timezone)->startOfWeek($startOfWeek->carbonWeekDay())->toDateTimeString();
         if ($group === TimeEntryAggregationType::Day) {
-            return 'date('.$dateWithTimeZone.')';
+            return Sql::date($dateWithTimeZone);
         } elseif ($group === TimeEntryAggregationType::Week) {
-            return "to_char(date_bin('7 days', ".$dateWithTimeZone.", timestamp '".$startOfWeek."'), 'YYYY-MM-DD')";
+            return Sql::weekGroup($dateWithTimeZone, $startOfWeek);
         } elseif ($group === TimeEntryAggregationType::Month) {
-            return 'to_char('.$dateWithTimeZone.', \'YYYY-MM\')';
+            return Sql::monthGroup($dateWithTimeZone);
         } elseif ($group === TimeEntryAggregationType::Year) {
-            return 'to_char('.$dateWithTimeZone.', \'YYYY\')';
+            return Sql::yearGroup($dateWithTimeZone);
         } elseif ($group === TimeEntryAggregationType::User) {
             return 'user_id';
         } elseif ($group === TimeEntryAggregationType::Project) {
@@ -507,7 +512,7 @@ class TimeEntryAggregationService
         } elseif ($group === TimeEntryAggregationType::Description) {
             return 'description';
         } elseif ($group === TimeEntryAggregationType::Tag) {
-            return 'tag';
+            return Sql::isMySql() ? 'coalesce(tag_values.tag, \'\')' : 'tag';
         }
     }
 

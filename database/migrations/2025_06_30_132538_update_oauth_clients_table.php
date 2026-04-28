@@ -58,8 +58,8 @@ return new class extends Migration
             DB::table('oauth_clients')
                 ->where('id', $client->id)
                 ->update([
-                    'redirect_uris' => $redirectUris,
-                    'grant_types' => $grantTypes,
+                    'redirect_uris' => json_encode($redirectUris, JSON_THROW_ON_ERROR),
+                    'grant_types' => json_encode($grantTypes, JSON_THROW_ON_ERROR),
                 ]);
         });
 
@@ -91,8 +91,12 @@ return new class extends Migration
         });
 
         DB::table('oauth_clients')->eachById(function ($client): void {
-            $redirectUris = json_decode($client->redirect_uris);
-            $grantTypes = json_decode($client->grant_types);
+            $redirectUris = is_array($client->redirect_uris)
+                ? $client->redirect_uris
+                : json_decode($client->redirect_uris, false, 512, JSON_THROW_ON_ERROR);
+            $grantTypes = is_array($client->grant_types)
+                ? $client->grant_types
+                : json_decode($client->grant_types, false, 512, JSON_THROW_ON_ERROR);
 
             DB::table('oauth_clients')
                 ->where('id', $client->id)

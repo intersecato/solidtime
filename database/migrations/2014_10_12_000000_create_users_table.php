@@ -35,8 +35,15 @@ return new class extends Migration
             ]);
             $table->timestamps();
 
-            $table->uniqueIndex('email')
-                ->where('is_placeholder = false');
+            if (Schema::getConnection()->getDriverName() === 'mysql') {
+                $table->string('real_user_email')
+                    ->nullable()
+                    ->storedAs('case when `is_placeholder` = 0 then `email` else null end');
+                $table->unique('real_user_email');
+            } else {
+                $table->uniqueIndex('email')
+                    ->where('is_placeholder = false');
+            }
         });
     }
 
