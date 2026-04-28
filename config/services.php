@@ -28,6 +28,9 @@ return [
         'auto_register' => env('OIDC_AUTO_REGISTER', true),
         'auto_link' => env('OIDC_AUTO_LINK', true),
         'require_verified_email' => env('OIDC_REQUIRE_VERIFIED_EMAIL', false),
+        'logout_enabled' => env('OIDC_LOGOUT_ENABLED', false),
+        'end_session_endpoint' => env('OIDC_END_SESSION_ENDPOINT'),
+        'post_logout_redirect_uri' => env('OIDC_POST_LOGOUT_REDIRECT_URI'),
         'http_timeout' => env('OIDC_HTTP_TIMEOUT', 10),
     ],
 ];

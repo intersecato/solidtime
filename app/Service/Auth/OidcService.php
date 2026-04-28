@@ -110,11 +110,94 @@ class OidcService
         return $this->resolveUser($claims);
     }
 
+    public function endSessionUrl(?string $postLogoutRedirectUri = null): ?string
+    {
+        if (! $this->isEnabled() || ! (bool) config('services.oidc.logout_enabled')) {
+            return null;
+        }
+
+        try {
+            $endpoint = $this->endSessionEndpoint();
+            if ($endpoint === null) {
+                return null;
+            }
+
+            $query = [
+                'client_id' => (string) config('services.oidc.client_id'),
+            ];
+
+            $postLogoutRedirectUri ??= config('services.oidc.post_logout_redirect_uri');
+            if (filled($postLogoutRedirectUri)) {
+                $query['post_logout_redirect_uri'] = (string) $postLogoutRedirectUri;
+            } else {
+                $query['post_logout_redirect_uri'] = route('login');
+            }
+
+            return $this->appendQuery($endpoint, $query);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to build OIDC logout URL.', [
+                'exception' => $exception,
+            ]);
+
+            return null;
+        }
+    }
+
     private function ensureEnabled(): void
     {
         if (! $this->isEnabled()) {
             throw new RuntimeException('OIDC is not enabled.');
         }
+    }
+
+    private function endSessionEndpoint(): ?string
+    {
+        $configuredEndpoint = config('services.oidc.end_session_endpoint');
+        if (filled($configuredEndpoint)) {
+            return $this->validHttpUrl((string) $configuredEndpoint);
+        }
+
+        $metadataUrl = rtrim((string) config('services.oidc.issuer'), '/').'/.well-known/openid-configuration';
+        $response = (new GuzzleClient([
+            'timeout' => (float) config('services.oidc.http_timeout'),
+            'http_errors' => false,
+        ]))->get($metadataUrl);
+
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+            return null;
+        }
+
+        $metadata = json_decode((string) $response->getBody(), true);
+        if (! is_array($metadata)) {
+            return null;
+        }
+
+        $endpoint = $metadata['end_session_endpoint'] ?? null;
+        if (! is_string($endpoint)) {
+            return null;
+        }
+
+        return $this->validHttpUrl($endpoint);
+    }
+
+    /**
+     * @param  array<string, string>  $query
+     */
+    private function appendQuery(string $url, array $query): string
+    {
+        $separator = str_contains($url, '?') ? '&' : '?';
+
+        return $url.$separator.http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+    }
+
+    private function validHttpUrl(string $url): ?string
+    {
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return null;
+        }
+
+        return $url;
     }
 
     private function client(): ClientInterface

@@ -49,4 +49,26 @@ class OidcAuthenticationTest extends TestCase
 
         $this->assertAuthenticatedAs($user);
     }
+
+    public function test_logout_redirects_to_oidc_end_session_when_available(): void
+    {
+        $user = User::factory()->create();
+
+        $this->mock(OidcService::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('endSessionUrl')
+                ->once()
+                ->andReturn('https://idp.example.com/logout?client_id=solidtime');
+        });
+
+        $this->actingAs($user)
+            ->withHeader('X-Inertia', 'true')
+            ->post('/logout')
+            ->assertStatus(409)
+            ->assertHeader(
+                'X-Inertia-Location',
+                'https://idp.example.com/logout?client_id=solidtime'
+            );
+
+        $this->assertGuest();
+    }
 }
