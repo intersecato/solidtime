@@ -23,6 +23,10 @@ class HarvestClientsImporter extends DefaultImporter
     #[\Override]
     public function importData(string $data, string $timezone): void
     {
+        if (! $this->clientsEnabled()) {
+            return;
+        }
+
         try {
             $reader = Reader::createFromString($data);
             $reader->setHeaderOffset(0);

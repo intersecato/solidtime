@@ -49,7 +49,7 @@ import type { ExportFormat } from '@/types/reporting';
 import { getRandomColorWithSeed } from '@/packages/ui/src/utils/color';
 import { useProjectsQuery } from '@/utils/useProjectsQuery';
 import { useAggregatedTimeEntriesQuery } from '@/utils/useAggregatedTimeEntriesQuery';
-import { isBillableEnabled } from '@/utils/features';
+import { isBillableEnabled, isClientsEnabled } from '@/utils/features';
 
 type TimeEntryRoundingType = 'up' | 'down' | 'nearest';
 
@@ -82,6 +82,7 @@ const { groupByOptions, getNameForReportingRowEntry, emptyPlaceholder } = report
 
 const organization = inject<ComputedRef<Organization>>('organization');
 const billableEnabled = isBillableEnabled();
+const clientsEnabled = isClientsEnabled();
 
 const showBillableRate = computed(() => {
     return !!(
@@ -133,7 +134,8 @@ const filterParams = computed<AggregatedTimeEntriesQueryParams>(() => {
         member_ids: selectedMembers.value.length > 0 ? selectedMembers.value : undefined,
         project_ids: selectedProjects.value.length > 0 ? selectedProjects.value : undefined,
         task_ids: selectedTasks.value.length > 0 ? selectedTasks.value : undefined,
-        client_ids: selectedClients.value.length > 0 ? selectedClients.value : undefined,
+        client_ids:
+            clientsEnabled && selectedClients.value.length > 0 ? selectedClients.value : undefined,
         tag_ids: selectedTags.value.length > 0 ? selectedTags.value : undefined,
         billable: billableEnabled && billable.value !== null ? billable.value : undefined,
         member_id: getCurrentRole() === 'employee' ? getCurrentMembershipId() : undefined,
@@ -153,8 +155,8 @@ const graphQueryParams = computed<AggregatedTimeEntriesQueryParams>(() => {
 const tableQueryParams = computed<AggregatedTimeEntriesQueryParams>(() => {
     return {
         ...filterParams.value,
-        group: group.value,
-        sub_group: subGroup.value,
+        group: clientsEnabled || group.value !== 'client' ? group.value : 'project',
+        sub_group: clientsEnabled || subGroup.value !== 'client' ? subGroup.value : 'task',
     };
 });
 
@@ -182,8 +184,8 @@ const reportProperties = computed(() => {
     return {
         ...rest,
         billable: billableEnabled ? billableValue : null,
-        group: group.value,
-        sub_group: subGroup.value,
+        group: clientsEnabled || group.value !== 'client' ? group.value : 'project',
+        sub_group: clientsEnabled || subGroup.value !== 'client' ? subGroup.value : 'task',
         history_group: getOptimalGroupingOption(startDate.value, endDate.value),
     } as CreateReportBodyProperties;
 });
@@ -199,8 +201,9 @@ async function downloadExport(format: ExportFormat) {
                     },
                     queries: {
                         ...filterParams.value,
-                        group: group.value,
-                        sub_group: subGroup.value,
+                        group: clientsEnabled || group.value !== 'client' ? group.value : 'project',
+                        sub_group:
+                            clientsEnabled || subGroup.value !== 'client' ? subGroup.value : 'task',
                         history_group: getOptimalGroupingOption(startDate.value, endDate.value),
                         format: format,
                     },

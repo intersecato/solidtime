@@ -5,6 +5,7 @@ import type { SortColumn, SortDirection } from '@/Components/Common/Project/Proj
 
 const props = defineProps<{
     showBillableRate: boolean;
+    showClients: boolean;
     sortColumn: SortColumn;
     sortDirection: SortDirection;
     descFirstColumns: ReadonlySet<SortColumn>;
@@ -46,6 +47,7 @@ function isChevronUp(column: SortColumn): boolean {
             <span v-else class="w-4 h-4"></span>
         </div>
         <div
+            v-if="showClients"
             class="px-3 py-1.5 text-left text-text-tertiary cursor-pointer hover:bg-secondary hover:text-text-primary transition-colors select-none flex items-center gap-1"
             @click="handleSort('client_name')">
             Client

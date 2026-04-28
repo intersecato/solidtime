@@ -34,6 +34,7 @@ import { useProjectsStore } from '@/utils/useProjects';
 import { useClientsStore } from '@/utils/useClients';
 import { useTimeEntriesInfiniteQuery } from '@/utils/useTimeEntriesInfiniteQuery';
 import { useTimeEntriesMutations } from '@/utils/useTimeEntriesMutations';
+import { isClientsEnabled } from '@/utils/features';
 
 const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isPending } =
     useTimeEntriesInfiniteQuery();
@@ -77,6 +78,8 @@ watch(isLoadMoreVisible, async (isVisible) => {
 const { projects } = useProjectsQuery();
 const { tasks } = useTasksQuery();
 const { clients } = useClientsQuery();
+const clientsEnabled = isClientsEnabled();
+const activeClients = computed(() => (clientsEnabled ? clients.value : []));
 
 const { tags } = useTagsQuery();
 
@@ -87,6 +90,8 @@ async function createProject(project: CreateProjectBody): Promise<Project | unde
     return await useProjectsStore().createProject(project);
 }
 async function createClient(body: CreateClientBody): Promise<Client | undefined> {
+    if (!clientsEnabled) return undefined;
+
     return await useClientsStore().createClient(body);
 }
 
@@ -119,7 +124,7 @@ function deleteSelected() {
             :tasks="tasks"
             :tags="tags"
             :currency="getOrganizationCurrencyString()"
-            :clients="clients"
+            :clients="activeClients"
             :organization-billable-rate="organization?.billable_rate ?? null"
             class="border-t border-default-background-separator hidden sm:block"
             :update-time-entries="
@@ -141,7 +146,7 @@ function deleteSelected() {
             :enable-estimated-time="isAllowedToPerformPremiumAction()"
             :can-create-project="canCreateProjects()"
             :organization-billable-rate="organization?.billable_rate ?? null"
-            :clients
+            :clients="activeClients"
             :create-client
             :update-time-entry
             :update-time-entries

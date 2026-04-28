@@ -25,8 +25,10 @@ import { canCreateProjects } from '@/utils/permissions';
 import { useCurrentTimeEntryStore } from '@/utils/useCurrentTimeEntry';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
+import { isClientsEnabled } from '@/utils/features';
 
 const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
+const clientsEnabled = isClientsEnabled();
 const calendarStart = ref<Date | undefined>(undefined);
 const calendarEnd = ref<Date | undefined>(undefined);
 
@@ -89,12 +91,15 @@ async function createProject(project: CreateProjectBody): Promise<Project | unde
 }
 
 async function createClient(body: CreateClientBody): Promise<Client | undefined> {
+    if (!clientsEnabled) return undefined;
+
     return await useClientsStore().createClient(body);
 }
 
 const { projects } = useProjectsQuery();
 const { tasks } = useTasksQuery();
 const { clients } = useClientsQuery();
+const activeClients = computed(() => (clientsEnabled ? clients.value : []));
 const { tags } = useTagsQuery();
 
 const queryClient = useQueryClient();
@@ -121,7 +126,7 @@ function onRefresh() {
             :time-entries="currentTimeEntries"
             :projects="projects"
             :tasks="tasks"
-            :clients="clients"
+            :clients="activeClients"
             :tags="tags"
             :loading="timeEntriesLoading"
             :enable-estimated-time="isAllowedToPerformPremiumAction()"

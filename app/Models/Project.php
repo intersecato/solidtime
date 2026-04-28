@@ -101,6 +101,9 @@ class Project extends Model implements AuditableContract
                 $project->is_billable = false;
                 $project->billable_rate = null;
             }
+            if (! (bool) config('app.enable_clients', true)) {
+                $project->client_id = null;
+            }
         });
     }
 
@@ -127,6 +130,11 @@ class Project extends Model implements AuditableContract
     public function getBillableRateAttribute(mixed $value): ?int
     {
         return (bool) config('app.enable_billable', true) && $value !== null ? (int) $value : null;
+    }
+
+    public function getClientIdAttribute(mixed $value): ?string
+    {
+        return (bool) config('app.enable_clients', true) && $value !== null ? (string) $value : null;
     }
 
     /**

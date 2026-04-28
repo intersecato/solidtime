@@ -63,13 +63,19 @@ class ReportController extends Controller
         $filter->addProjectIdsFilter($properties->projectIds?->toArray());
         $filter->addTagIdsFilter($properties->tagIds?->toArray());
         $filter->addTaskIdsFilter($properties->taskIds?->toArray());
-        $filter->addClientIdsFilter($properties->clientIds?->toArray());
+        if ((bool) config('app.enable_clients', true)) {
+            $filter->addClientIdsFilter($properties->clientIds?->toArray());
+        }
         $timeEntriesQuery = $filter->get();
         $group = $report->properties->group;
         $subGroup = $report->properties->subGroup;
         if (! (bool) config('app.enable_billable', true)) {
             $group = $group === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Project : $group;
             $subGroup = $subGroup === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Task : $subGroup;
+        }
+        if (! (bool) config('app.enable_clients', true)) {
+            $group = $group === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $group;
+            $subGroup = $subGroup === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $subGroup;
         }
 
         $data = $timeEntryAggregationService->getAggregatedTimeEntriesWithDescriptions(

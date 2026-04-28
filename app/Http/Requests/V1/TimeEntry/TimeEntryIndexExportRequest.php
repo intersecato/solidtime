@@ -67,6 +67,9 @@ class TimeEntryIndexExportRequest extends TimeEntryIndexRequest
             'client_ids.*' => [
                 'string',
                 function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (! (bool) config('app.enable_clients', true)) {
+                        return;
+                    }
                     if ($value === TimeEntryFilter::NONE_VALUE) {
                         return;
                     }

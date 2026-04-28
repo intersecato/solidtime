@@ -71,6 +71,8 @@ Route::middleware([
     })->name('projects.show');
 
     Route::get('/clients', function () {
+        abort_unless((bool) config('app.enable_clients', true), 404);
+
         return Inertia::render('Clients');
     })->name('clients');
 

@@ -29,6 +29,11 @@ class ProjectController extends Controller
         return (bool) config('app.enable_billable', true);
     }
 
+    private function clientsEnabled(): bool
+    {
+        return (bool) config('app.enable_clients', true);
+    }
+
     protected function checkPermission(Organization $organization, string $permission, ?Project $project = null): void
     {
         parent::checkPermission($organization, $permission);
@@ -109,7 +114,7 @@ class ProjectController extends Controller
         $project->color = $request->input('color');
         $project->is_billable = $this->billableEnabled() && (bool) $request->input('is_billable');
         $project->billable_rate = $this->billableEnabled() ? $request->getBillableRate() : null;
-        $project->client_id = $request->input('client_id');
+        $project->client_id = $this->clientsEnabled() ? $request->input('client_id') : null;
         $project->is_public = $request->getIsPublic();
         if ($this->canAccessPremiumFeatures($organization) && $request->has('estimated_time')) {
             $project->estimated_time = $request->getEstimatedTime();
@@ -144,10 +149,12 @@ class ProjectController extends Controller
         }
         $oldBillableRate = $project->billable_rate;
         $clientIdChanged = false;
+        $oldClientId = $project->getRawOriginal('client_id');
         $newBillableRate = $this->billableEnabled() ? $request->getBillableRate() : null;
         $project->billable_rate = $newBillableRate;
-        if ($project->client_id !== $request->input('client_id')) {
-            $project->client_id = $request->input('client_id');
+        $newClientId = $this->clientsEnabled() ? $request->input('client_id') : null;
+        if (($this->clientsEnabled() ? $project->client_id : $oldClientId) !== $newClientId) {
+            $project->client_id = $newClientId;
             $clientIdChanged = true;
         }
         $project->save();
@@ -159,7 +166,7 @@ class ProjectController extends Controller
             TimeEntry::query()
                 ->whereBelongsTo($organization, 'organization')
                 ->whereBelongsTo($project, 'project')
-                ->update(['client_id' => $project->client_id]);
+                ->update(['client_id' => $this->clientsEnabled() ? $project->client_id : null]);
         }
 
         return new ProjectResource($project, $this->billableEnabled());

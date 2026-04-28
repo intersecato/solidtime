@@ -38,7 +38,7 @@ class GenericProjectsImporter extends DefaultImporter
             $records = $reader->getRecords();
             foreach ($records as $record) {
                 $clientId = null;
-                if (isset($record['client']) && $record['client'] !== '') {
+                if ($this->clientsEnabled() && isset($record['client']) && $record['client'] !== '') {
                     $clientId = $this->clientImportHelper->getKey([
                         'name' => $record['client'],
                         'organization_id' => $this->organization->id,

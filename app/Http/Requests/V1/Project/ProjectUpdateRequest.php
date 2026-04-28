@@ -35,7 +35,9 @@ class ProjectUpdateRequest extends BaseFormRequest
                 'max:255',
                 UniqueEloquent::make(Project::class, 'name', function (Builder $builder): Builder {
                     /** @var Builder<Project> $builder */
-                    $clientId = $this->input('client_id');
+                    $clientId = (bool) config('app.enable_clients', true)
+                        ? $this->input('client_id')
+                        : null;
                     if (! is_string($clientId) || ! Str::isUuid($clientId)) {
                         $clientId = null;
                     }
@@ -60,14 +62,19 @@ class ProjectUpdateRequest extends BaseFormRequest
             'is_public' => [
                 'boolean',
             ],
-            'client_id' => [
-                'present',
-                'nullable',
-                ExistsEloquent::make(Client::class, null, function (Builder $builder): Builder {
-                    /** @var Builder<Client> $builder */
-                    return $builder->whereBelongsTo($this->organization, 'organization');
-                })->uuid(),
-            ],
+            'client_id' => (bool) config('app.enable_clients', true)
+                ? [
+                    'present',
+                    'nullable',
+                    ExistsEloquent::make(Client::class, null, function (Builder $builder): Builder {
+                        /** @var Builder<Client> $builder */
+                        return $builder->whereBelongsTo($this->organization, 'organization');
+                    })->uuid(),
+                ]
+                : [
+                    'present',
+                    'nullable',
+                ],
             'billable_rate' => array_merge([
                 'nullable',
             ],

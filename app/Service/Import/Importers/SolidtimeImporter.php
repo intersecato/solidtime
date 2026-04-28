@@ -56,14 +56,17 @@ class SolidtimeImporter extends DefaultImporter
                 throw new ImportException('Invalid version');
             }
 
-            if (! file_exists($temporaryDirectory->path('clients.csv'))) {
+            if ($this->clientsEnabled() && ! file_exists($temporaryDirectory->path('clients.csv'))) {
                 throw new ImportException('File "clients.csv" missing in ZIP');
             }
-            $clientsReader = Reader::createFromPath($temporaryDirectory->path('clients.csv'));
-            $clientsReader->setHeaderOffset(0);
-            $clientsReader->setDelimiter(',');
-            $clientsReader->setEnclosure('"');
-            $clientsReader->setEscape('');
+            $clientsReader = null;
+            if ($this->clientsEnabled() && file_exists($temporaryDirectory->path('clients.csv'))) {
+                $clientsReader = Reader::createFromPath($temporaryDirectory->path('clients.csv'));
+                $clientsReader->setHeaderOffset(0);
+                $clientsReader->setDelimiter(',');
+                $clientsReader->setEnclosure('"');
+                $clientsReader->setEscape('');
+            }
 
             if (! file_exists($temporaryDirectory->path('members.csv'))) {
                 throw new ImportException('File "members.csv" missing in ZIP');
@@ -128,13 +131,15 @@ class SolidtimeImporter extends DefaultImporter
             $timeEntriesReader->setEnclosure('"');
             $timeEntriesReader->setEscape('');
 
-            foreach ($clientsReader as $client) {
-                $this->clientImportHelper->getKey([
-                    'name' => $client['name'],
-                    'organization_id' => $this->organization->id,
-                ], [
-                    'archived_at' => $client['archived_at'] !== '' ? Carbon::createFromFormat('Y-m-d\TH:i:s\Z', $client['archived_at'], 'UTC') : null,
-                ], $client['id']);
+            if ($clientsReader !== null) {
+                foreach ($clientsReader as $client) {
+                    $this->clientImportHelper->getKey([
+                        'name' => $client['name'],
+                        'organization_id' => $this->organization->id,
+                    ], [
+                        'archived_at' => $client['archived_at'] !== '' ? Carbon::createFromFormat('Y-m-d\TH:i:s\Z', $client['archived_at'], 'UTC') : null,
+                    ], $client['id']);
+                }
             }
 
             foreach ($tagsReader as $tag) {
@@ -179,7 +184,7 @@ class SolidtimeImporter extends DefaultImporter
 
             foreach ($projectsReader as $project) {
                 $clientId = null;
-                if ($project['client_id'] !== '') {
+                if ($this->clientsEnabled() && $project['client_id'] !== '') {
                     $clientId = $this->clientImportHelper->getKeyByExternalIdentifier($project['client_id']);
                     if ($clientId === null) {
                         throw new Exception('Client does not exist');
@@ -236,7 +241,7 @@ class SolidtimeImporter extends DefaultImporter
                 $memberId = $this->memberImportHelper->getKeyByExternalIdentifier($timeEntryRow['member_id']);
                 $member = $this->memberImportHelper->getModelById($memberId);
                 $clientId = null;
-                if ($timeEntryRow['client_id'] !== '') {
+                if ($this->clientsEnabled() && $timeEntryRow['client_id'] !== '') {
                     $clientId = $this->clientImportHelper->getKeyByExternalIdentifier($timeEntryRow['client_id']);
                 }
                 $project = null;

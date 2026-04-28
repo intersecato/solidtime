@@ -23,12 +23,14 @@ import ProjectStatusFilterBadge from '@/Components/Common/Project/ProjectStatusF
 import ProjectClientFilterBadge from '@/Components/Common/Project/ProjectClientFilterBadge.vue';
 import { NO_CLIENT_ID } from '@/Components/Common/Project/constants';
 import type { SortColumn, SortDirection } from '@/Components/Common/Project/ProjectTable.vue';
-import { isBillableEnabled } from '@/utils/features';
+import { isBillableEnabled, isClientsEnabled } from '@/utils/features';
 
 // Fetch data using TanStack Query
 const { projects } = useProjectsQuery();
 const { clients } = useClientsQuery();
 const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
+const clientsEnabled = isClientsEnabled();
+const activeClients = computed(() => (clientsEnabled ? clients.value : []));
 
 // Table state persisted in localStorage
 interface ProjectTableState {
@@ -71,7 +73,7 @@ const filteredProjects = computed(() => {
         }
 
         // Client filter
-        const hasClientFilter = tableState.value.filters.clientIds.length > 0;
+        const hasClientFilter = clientsEnabled && tableState.value.filters.clientIds.length > 0;
         if (hasClientFilter) {
             const matchesNoClient =
                 tableState.value.filters.clientIds.includes(NO_CLIENT_ID) && !project.client_id;
@@ -103,6 +105,8 @@ async function createProject(project: CreateProjectBody): Promise<Project | unde
 }
 
 async function createClient(client: CreateClientBody): Promise<Client | undefined> {
+    if (!clientsEnabled) return undefined;
+
     return await useClientsStore().createClient(client);
 }
 
@@ -134,14 +138,14 @@ const showBillableRate = computed(() => {
                 :create-client
                 :currency="getOrganizationCurrencyString()"
                 :organization-billable-rate="organization?.billable_rate ?? null"
-                :clients="clients"
+                :clients="activeClients"
                 @submit="createProject"></ProjectCreateModal>
         </MainContainer>
         <MainContainer>
             <div class="flex items-center gap-2 py-1">
                 <ProjectsFilterDropdown
                     :filters="tableState.filters"
-                    :clients="clients"
+                    :clients="activeClients"
                     @update:filters="tableState.filters = $event" />
 
                 <!-- Active Filters -->
@@ -155,10 +159,10 @@ const showBillableRate = computed(() => {
                     " />
 
                 <ProjectClientFilterBadge
-                    v-if="tableState.filters.clientIds.length > 0"
+                    v-if="clientsEnabled && tableState.filters.clientIds.length > 0"
                     data-testid="client-filter-badge"
                     :value="tableState.filters.clientIds"
-                    :clients="clients"
+                    :clients="activeClients"
                     @remove="removeClientFilter"
                     @update:value="tableState.filters.clientIds = $event as string[]" />
             </div>
@@ -166,6 +170,7 @@ const showBillableRate = computed(() => {
 
         <ProjectTable
             :show-billable-rate="showBillableRate"
+            :show-clients="clientsEnabled"
             :projects="filteredProjects"
             :sort-column="tableState.sortColumn"
             :sort-direction="tableState.sortDirection"

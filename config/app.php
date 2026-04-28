@@ -77,6 +77,8 @@ return [
 
     'enable_billable' => (bool) env('APP_ENABLE_BILLABLE', true),
 
+    'enable_clients' => (bool) env('APP_ENABLE_CLIENTS', true),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

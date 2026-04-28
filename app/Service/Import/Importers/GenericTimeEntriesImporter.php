@@ -87,7 +87,7 @@ class GenericTimeEntriesImporter extends DefaultImporter
                 ]);
                 $member = $this->memberImportHelper->getModelById($memberId);
                 $clientId = null;
-                if ($record['client'] !== '') {
+                if ($this->clientsEnabled() && $record['client'] !== '') {
                     $clientId = $this->clientImportHelper->getKey([
                         'name' => $record['client'],
                         'organization_id' => $this->organization->id,

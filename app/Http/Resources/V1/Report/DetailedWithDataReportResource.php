@@ -78,6 +78,10 @@ class DetailedWithDataReportResource extends BaseResource
             $group = $group === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Project : $group;
             $subGroup = $subGroup === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Task : $subGroup;
         }
+        if (! (bool) config('app.enable_clients', true)) {
+            $group = $group === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $group;
+            $subGroup = $subGroup === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $subGroup;
+        }
 
         return [
             /** @var string $name Name */

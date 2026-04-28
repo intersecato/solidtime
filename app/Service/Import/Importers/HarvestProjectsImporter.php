@@ -38,7 +38,7 @@ class HarvestProjectsImporter extends DefaultImporter
             $records = $reader->getRecords();
             foreach ($records as $record) {
                 $clientId = null;
-                if ($record['Client'] !== '') {
+                if ($this->clientsEnabled() && $record['Client'] !== '') {
                     $clientId = $this->clientImportHelper->getKey([
                         'name' => $record['Client'],
                         'organization_id' => $this->organization->id,

@@ -18,8 +18,14 @@ use Illuminate\Support\Carbon;
 
 class ClientController extends Controller
 {
+    private function ensureClientsEnabled(): void
+    {
+        abort_unless((bool) config('app.enable_clients', true), 404);
+    }
+
     protected function checkPermission(Organization $organization, string $permission, ?Client $client = null): void
     {
+        $this->ensureClientsEnabled();
         parent::checkPermission($organization, $permission);
         if ($client !== null && $client->organization_id !== $organization->getKey()) {
             throw new AuthorizationException('Tag does not belong to organization');

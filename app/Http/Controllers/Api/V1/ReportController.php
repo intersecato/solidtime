@@ -22,6 +22,11 @@ use Illuminate\Http\JsonResponse;
 
 class ReportController extends Controller
 {
+    private function clientsEnabled(): bool
+    {
+        return (bool) config('app.enable_clients', true);
+    }
+
     /**
      * @throws AuthorizationException
      */
@@ -96,6 +101,14 @@ class ReportController extends Controller
                 ? TimeEntryAggregationType::Task
                 : $properties->subGroup;
         }
+        if (! $this->clientsEnabled()) {
+            $properties->group = $properties->group === TimeEntryAggregationType::Client
+                ? TimeEntryAggregationType::Project
+                : $properties->group;
+            $properties->subGroup = $properties->subGroup === TimeEntryAggregationType::Client
+                ? TimeEntryAggregationType::Project
+                : $properties->subGroup;
+        }
         $properties->historyGroup = $request->getPropertyHistoryGroup();
         $properties->start = $request->getPropertyStart();
         $properties->end = $request->getPropertyEnd();
@@ -104,7 +117,7 @@ class ReportController extends Controller
         $properties->billable = (bool) config('app.enable_billable', true)
             ? $request->getPropertyBillable()
             : null;
-        $properties->setClientIds($request->input('properties.client_ids', null));
+        $properties->setClientIds($this->clientsEnabled() ? $request->input('properties.client_ids', null) : null);
         $properties->setProjectIds($request->input('properties.project_ids', null));
         $properties->setTagIds($request->input('properties.tag_ids', null));
         $properties->setTaskIds($request->input('properties.task_ids', null));

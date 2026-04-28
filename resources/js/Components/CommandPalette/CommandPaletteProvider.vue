@@ -38,8 +38,10 @@ import TagDropdown from '@/packages/ui/src/Tag/TagDropdown.vue';
 // Dialog components for selectors
 import DialogModal from '@/packages/ui/src/DialogModal.vue';
 import SecondaryButton from '@/packages/ui/src/Buttons/SecondaryButton.vue';
+import { isClientsEnabled } from '@/utils/features';
 
 const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
+const clientsEnabled = isClientsEnabled();
 
 const {
     isOpen,
@@ -83,7 +85,9 @@ const page = usePage<{
 const availableRoles = computed(() => page.props.availableRoles ?? []);
 
 // Active clients for dropdowns
-const activeClients = computed(() => clients.value.filter((c) => !c.is_archived));
+const activeClients = computed(() =>
+    clientsEnabled ? clients.value.filter((c) => !c.is_archived) : []
+);
 
 // Keyboard shortcut handler
 function handleKeyDown(e: KeyboardEvent) {
@@ -113,6 +117,8 @@ async function createProject(project: CreateProjectBody): Promise<Project | unde
 }
 
 async function createClient(client: CreateClientBody): Promise<Client | undefined> {
+    if (!clientsEnabled) return undefined;
+
     const openedFromCommandPalette = showCreateClientModal.value;
     const newClient = await clientsStore.createClient(client);
     if (newClient && openedFromCommandPalette) {
@@ -170,7 +176,7 @@ const firstProjectId = computed(() => projects.value[0]?.id ?? '');
         :enable-estimated-time="isAllowedToPerformPremiumAction()" />
 
     <!-- Client Create Modal -->
-    <ClientCreateModal v-model:show="showCreateClientModal" />
+    <ClientCreateModal v-if="clientsEnabled" v-model:show="showCreateClientModal" />
 
     <!-- Task Create Modal -->
     <TaskCreateModal

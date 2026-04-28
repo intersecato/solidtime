@@ -66,7 +66,7 @@ class HarvestTimeEntriesImporter extends DefaultImporter
                 ]);
                 $member = $this->memberImportHelper->getModelById($memberId);
                 $clientId = null;
-                if ($record['Client'] !== '') {
+                if ($this->clientsEnabled() && $record['Client'] !== '') {
                     $clientId = $this->clientImportHelper->getKey([
                         'name' => $record['Client'],
                         'organization_id' => $this->organization->id,

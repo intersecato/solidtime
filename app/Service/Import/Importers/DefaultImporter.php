@@ -71,6 +71,11 @@ abstract class DefaultImporter implements ImporterContract
 
     protected BillableRateService $billableRateService;
 
+    protected function clientsEnabled(): bool
+    {
+        return (bool) config('app.enable_clients', true);
+    }
+
     public function init(Organization $organization): void
     {
         $this->organization = $organization;
@@ -192,7 +197,7 @@ abstract class DefaultImporter implements ImporterContract
     public function getReport(): ReportDto
     {
         return new ReportDto(
-            clientsCreated: $this->clientImportHelper->getCreatedCount(),
+            clientsCreated: $this->clientsEnabled() ? $this->clientImportHelper->getCreatedCount() : 0,
             projectsCreated: $this->projectImportHelper->getCreatedCount(),
             tasksCreated: $this->taskImportHelper->getCreatedCount(),
             timeEntriesCreated: $this->timeEntriesCreated,

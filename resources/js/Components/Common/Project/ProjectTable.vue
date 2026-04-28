@@ -24,6 +24,7 @@ import { getOrganizationCurrencyString } from '@/utils/money';
 import { isAllowedToPerformPremiumAction } from '@/utils/billing';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
+import { isClientsEnabled } from '@/utils/features';
 import {
     useVueTable,
     getCoreRowModel,
@@ -36,6 +37,7 @@ const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
 const props = defineProps<{
     projects: Project[];
     showBillableRate: boolean;
+    showClients: boolean;
     sortColumn: SortColumn;
     sortDirection: SortDirection;
 }>();
@@ -145,11 +147,13 @@ async function createProject(project: CreateProjectBody): Promise<Project | unde
 }
 
 async function createClient(client: CreateClientBody): Promise<Client | undefined> {
+    if (!isClientsEnabled()) return undefined;
+
     return await useClientsStore().createClient(client);
 }
 
 const gridTemplate = computed(() => {
-    return `grid-template-columns: minmax(300px, 1fr) minmax(150px, auto) minmax(140px, auto) minmax(130px, auto) ${props.showBillableRate ? 'minmax(130px, auto)' : ''} minmax(120px, auto) 80px;`;
+    return `grid-template-columns: minmax(300px, 1fr) ${props.showClients ? 'minmax(150px, auto)' : ''} minmax(140px, auto) minmax(130px, auto) ${props.showBillableRate ? 'minmax(130px, auto)' : ''} minmax(120px, auto) 80px;`;
 });
 </script>
 
@@ -160,13 +164,14 @@ const gridTemplate = computed(() => {
         :create-client
         :currency="getOrganizationCurrencyString()"
         :organization-billable-rate="organization?.billable_rate ?? null"
-        :clients="clients"
+        :clients="props.showClients ? clients : []"
         :enable-estimated-time="isAllowedToPerformPremiumAction()"></ProjectCreateModal>
     <div class="flow-root max-w-[100vw] overflow-x-auto">
         <div class="inline-block min-w-full align-middle">
             <div data-testid="project_table" class="grid min-w-full" :style="gridTemplate">
                 <ProjectTableHeading
                     :show-billable-rate="props.showBillableRate"
+                    :show-clients="props.showClients"
                     :sort-column="props.sortColumn"
                     :sort-direction="props.sortDirection"
                     :desc-first-columns="descFirstColumns"
@@ -197,6 +202,7 @@ const gridTemplate = computed(() => {
                 <template v-for="project in sortedProjects" :key="project.id">
                     <ProjectTableRow
                         :show-billable-rate="props.showBillableRate"
+                        :show-clients="props.showClients"
                         :project="project"></ProjectTableRow>
                 </template>
             </div>

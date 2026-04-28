@@ -14,7 +14,7 @@ import DateRangePicker from '@/packages/ui/src/Input/DateRangePicker.vue';
 import TagDropdown from '@/packages/ui/src/Tag/TagDropdown.vue';
 import { useTagsQuery } from '@/utils/useTagsQuery';
 import { useTagsStore } from '@/utils/useTags';
-import { isBillableEnabled } from '@/utils/features';
+import { isBillableEnabled, isClientsEnabled } from '@/utils/features';
 
 type TimeEntryRoundingType = 'up' | 'down' | 'nearest';
 
@@ -36,6 +36,7 @@ const emit = defineEmits<{
 
 const { tags } = useTagsQuery();
 const billableEnabled = isBillableEnabled();
+const clientsEnabled = isClientsEnabled();
 
 async function createTag(name: string) {
     return await useTagsStore().createTag(name);
@@ -74,7 +75,10 @@ async function createTag(name: string) {
                             :icon="CheckCircleIcon" />
                     </template>
                 </TaskMultiselectDropdown>
-                <ClientMultiselectDropdown v-model="selectedClients" @submit="emit('submit')">
+                <ClientMultiselectDropdown
+                    v-if="clientsEnabled"
+                    v-model="selectedClients"
+                    @submit="emit('submit')">
                     <template #trigger>
                         <ReportingFilterBadge
                             :count="selectedClients.length"

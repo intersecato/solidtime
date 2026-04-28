@@ -4,8 +4,13 @@ import { getCurrentOrganizationId } from '@/utils/useUser';
 import type { Client } from '@/packages/api/src';
 import { computed } from 'vue';
 import { fetchAllPages } from '@/utils/fetchAllPages';
+import { isClientsEnabled } from '@/utils/features';
 
 export async function fetchAllClients(organizationId: string): Promise<Client[]> {
+    if (!isClientsEnabled()) {
+        return [];
+    }
+
     return fetchAllPages((page) =>
         api.getClients({
             params: { organization: organizationId },
@@ -25,7 +30,7 @@ export function useClientsQuery() {
             const data = await fetchAllClients(organizationId);
             return { data };
         },
-        enabled: () => !!getCurrentOrganizationId(),
+        enabled: () => isClientsEnabled() && !!getCurrentOrganizationId(),
         staleTime: 1000 * 30, // 30 seconds
     });
 

@@ -39,6 +39,7 @@ class ExportService
         $exportId = Str::uuid();
         $timeStamp = Carbon::now();
         $temporaryDirectory = TemporaryDirectory::make();
+        $clientsEnabled = (bool) config('app.enable_clients', true);
         Log::debug('Start exporting organization', [
             'organization_id' => $organization->getKey(),
             'export_id' => $exportId,
@@ -123,8 +124,8 @@ class ExportService
             ]);
             TimeEntry::query()
                 ->whereBelongsTo($organization, 'organization')
-                ->chunk(1000, function (Collection $timeEntries) use (&$writer): void {
-                    $timeEntries->each(function (TimeEntry $timeEntry) use (&$writer): void {
+                ->chunk(1000, function (Collection $timeEntries) use (&$writer, $clientsEnabled): void {
+                    $timeEntries->each(function (TimeEntry $timeEntry) use (&$writer, $clientsEnabled): void {
                         $tags = json_encode($timeEntry->tags);
                         $writer->insertOne([
                             $timeEntry->id,
@@ -136,7 +137,7 @@ class ExportService
                             $timeEntry->member_id,
                             $timeEntry->user_id,
                             $timeEntry->organization_id,
-                            $timeEntry->client_id ?? '',
+                            $clientsEnabled ? ($timeEntry->client_id ?? '') : '',
                             $timeEntry->project_id ?? '',
                             $timeEntry->task_id ?? '',
                             $tags === false ? '' : $tags,
@@ -148,33 +149,35 @@ class ExportService
                     });
                 });
 
-            // Clients
-            $writer = Writer::createFromPath($temporaryDirectory->path('clients.csv'), 'w+');
-            $writer->setDelimiter(',');
-            $writer->setEnclosure('"');
-            $writer->setEscape('');
-            $writer->insertOne([
-                'id',
-                'name',
-                'organization_id',
-                'archived_at',
-                'created_at',
-                'updated_at',
-            ]);
-            Client::query()
-                ->whereBelongsTo($organization, 'organization')
-                ->chunk(1000, function (Collection $clients) use (&$writer): void {
-                    $clients->each(function (Client $client) use (&$writer): void {
-                        $writer->insertOne([
-                            $client->id,
-                            $client->name,
-                            $client->organization_id,
-                            $client->archived_at?->toIso8601ZuluString() ?? '',
-                            $client->created_at?->toIso8601ZuluString() ?? '',
-                            $client->updated_at?->toIso8601ZuluString() ?? '',
-                        ]);
+            if ($clientsEnabled) {
+                // Clients
+                $writer = Writer::createFromPath($temporaryDirectory->path('clients.csv'), 'w+');
+                $writer->setDelimiter(',');
+                $writer->setEnclosure('"');
+                $writer->setEscape('');
+                $writer->insertOne([
+                    'id',
+                    'name',
+                    'organization_id',
+                    'archived_at',
+                    'created_at',
+                    'updated_at',
+                ]);
+                Client::query()
+                    ->whereBelongsTo($organization, 'organization')
+                    ->chunk(1000, function (Collection $clients) use (&$writer): void {
+                        $clients->each(function (Client $client) use (&$writer): void {
+                            $writer->insertOne([
+                                $client->id,
+                                $client->name,
+                                $client->organization_id,
+                                $client->archived_at?->toIso8601ZuluString() ?? '',
+                                $client->created_at?->toIso8601ZuluString() ?? '',
+                                $client->updated_at?->toIso8601ZuluString() ?? '',
+                            ]);
+                        });
                     });
-                });
+            }
 
             // Projects
             $writer = Writer::createFromPath($temporaryDirectory->path('projects.csv'), 'w+');
@@ -196,15 +199,15 @@ class ExportService
             ]);
             Project::query()
                 ->whereBelongsTo($organization, 'organization')
-                ->chunk(1000, function (Collection $projects) use (&$writer): void {
-                    $projects->each(function (Project $project) use (&$writer): void {
+                ->chunk(1000, function (Collection $projects) use (&$writer, $clientsEnabled): void {
+                    $projects->each(function (Project $project) use (&$writer, $clientsEnabled): void {
                         $writer->insertOne([
                             $project->id,
                             $project->name,
                             $project->color,
                             $project->billable_rate ?? '',
                             $project->is_public ? 'true' : 'false',
-                            $project->client_id ?? '',
+                            $clientsEnabled ? ($project->client_id ?? '') : '',
                             $project->organization_id,
                             $project->is_billable ? 'true' : 'false',
                             $project->archived_at?->toIso8601ZuluString() ?? '',
@@ -355,7 +358,9 @@ class ExportService
             $zip->addFile($temporaryDirectory->path('organizations.csv'), 'organizations.csv');
             $zip->addFile($temporaryDirectory->path('organization_invitations.csv'), 'organization_invitations.csv');
             $zip->addFile($temporaryDirectory->path('time_entries.csv'), 'time_entries.csv');
-            $zip->addFile($temporaryDirectory->path('clients.csv'), 'clients.csv');
+            if ($clientsEnabled) {
+                $zip->addFile($temporaryDirectory->path('clients.csv'), 'clients.csv');
+            }
             $zip->addFile($temporaryDirectory->path('projects.csv'), 'projects.csv');
             $zip->addFile($temporaryDirectory->path('project_members.csv'), 'project_members.csv');
             $zip->addFile($temporaryDirectory->path('members.csv'), 'members.csv');

@@ -37,7 +37,7 @@ class ProjectResource extends BaseResource
             /** @var string $color Color of project */
             'color' => $this->resource->color,
             /** @var string|null $client_id ID of client */
-            'client_id' => $this->resource->client_id,
+            'client_id' => (bool) config('app.enable_clients', true) ? $this->resource->client_id : null,
             /** @var bool $is_archived Whether the client is archived */
             'is_archived' => $this->resource->is_archived,
             /** @var int|null $billable_rate Billable rate in cents per hour */

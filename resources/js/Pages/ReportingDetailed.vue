@@ -67,7 +67,7 @@ import ReportingFilterBar from '@/Components/Common/Reporting/ReportingFilterBar
 import { useTimeEntriesReportQuery } from '@/utils/useTimeEntriesReportQuery';
 import { useTimeEntriesMutations } from '@/utils/useTimeEntriesMutations';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
-import { isBillableEnabled } from '@/utils/features';
+import { isBillableEnabled, isClientsEnabled } from '@/utils/features';
 
 // TimeEntryRoundingType is now defined in ReportingRoundingControls component
 type TimeEntryRoundingType = 'up' | 'down' | 'nearest';
@@ -87,6 +87,7 @@ const selectedTasks = ref<string[]>([]);
 const selectedClients = ref<string[]>([]);
 const billable = ref<'true' | 'false' | null>(null);
 const billableEnabled = isBillableEnabled();
+const clientsEnabled = isClientsEnabled();
 const roundingEnabled = ref<boolean>(false);
 const roundingType = ref<TimeEntryRoundingType>('nearest');
 const roundingMinutes = ref<number>(15);
@@ -115,7 +116,8 @@ function getFilterAttributes() {
         member_ids: selectedMembers.value.length > 0 ? selectedMembers.value : undefined,
         project_ids: selectedProjects.value.length > 0 ? selectedProjects.value : undefined,
         task_ids: selectedTasks.value.length > 0 ? selectedTasks.value : undefined,
-        client_ids: selectedClients.value.length > 0 ? selectedClients.value : undefined,
+        client_ids:
+            clientsEnabled && selectedClients.value.length > 0 ? selectedClients.value : undefined,
         tag_ids: selectedTags.value.length > 0 ? selectedTags.value : undefined,
         billable: billableEnabled && billable.value !== null ? billable.value : undefined,
         rounding_type: roundingEnabled.value ? roundingType.value : undefined,
@@ -169,6 +171,7 @@ onMounted(async () => {
 const { projects } = useProjectsQuery();
 const { tasks } = useTasksQuery();
 const { clients } = useClientsQuery();
+const activeClients = computed(() => (clientsEnabled ? clients.value : []));
 
 const selectedTimeEntries = ref<TimeEntry[]>([]);
 
@@ -197,6 +200,8 @@ async function createProject(project: CreateProjectBody): Promise<Project | unde
 }
 
 async function createClient(body: CreateClientBody): Promise<Client | undefined> {
+    if (!clientsEnabled) return undefined;
+
     return await useClientsStore().createClient(body);
 }
 
@@ -356,7 +361,7 @@ async function downloadExport(format: ExportFormat) {
             :tasks="tasks"
             :tags="tags"
             :currency="getOrganizationCurrencyString()"
-            :clients="clients"
+            :clients="activeClients"
             :organization-billable-rate="organization?.billable_rate ?? null"
             class="border-b border-default-background-separator"
             :update-time-entries="
@@ -383,7 +388,7 @@ async function downloadExport(format: ExportFormat) {
                     :projects="projects"
                     :tasks="tasks"
                     :tags="tags"
-                    :clients
+                    :clients="activeClients"
                     :create-tag
                     :update-time-entry
                     :on-start-stop-click="() => startTimeEntryFromExisting(entry)"

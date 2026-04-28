@@ -1,4 +1,5 @@
 import { usePage } from '@inertiajs/vue3';
+import { isClientsEnabled } from '@/utils/features';
 
 const page = usePage<{
     auth: {
@@ -50,19 +51,19 @@ export function canDeleteTasks() {
 }
 
 export function canCreateClients() {
-    return currentUserHasPermission('clients:create');
+    return isClientsEnabled() && currentUserHasPermission('clients:create');
 }
 
 export function canUpdateClients() {
-    return currentUserHasPermission('clients:update');
+    return isClientsEnabled() && currentUserHasPermission('clients:update');
 }
 
 export function canDeleteClients() {
-    return currentUserHasPermission('clients:delete');
+    return isClientsEnabled() && currentUserHasPermission('clients:delete');
 }
 
 export function canViewClients() {
-    return currentUserHasPermission('clients:view');
+    return isClientsEnabled() && currentUserHasPermission('clients:view');
 }
 
 export function canViewMembers() {

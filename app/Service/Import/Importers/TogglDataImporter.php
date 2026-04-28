@@ -80,13 +80,15 @@ class TogglDataImporter extends DefaultImporter
             if ($workspaceUsers === null) {
                 throw new ImportException('File "workspace_users.json" is empty');
             }
-            foreach ($clients as $client) {
-                $this->clientImportHelper->getKey([
-                    'name' => $client->name,
-                    'organization_id' => $this->organization->id,
-                ], [
-                    'archived_at' => $client->archived === true ? Carbon::now() : null,
-                ], (string) $client->id);
+            if ($this->clientsEnabled()) {
+                foreach ($clients as $client) {
+                    $this->clientImportHelper->getKey([
+                        'name' => $client->name,
+                        'organization_id' => $this->organization->id,
+                    ], [
+                        'archived_at' => $client->archived === true ? Carbon::now() : null,
+                    ], (string) $client->id);
+                }
             }
             foreach ($tags as $tag) {
                 $this->tagImportHelper->getKey([
@@ -124,7 +126,7 @@ class TogglDataImporter extends DefaultImporter
 
             foreach ($projects as $project) {
                 $clientId = null;
-                if ($project->client_id !== null) {
+                if ($this->clientsEnabled() && $project->client_id !== null) {
                     $clientId = $this->clientImportHelper->getKeyByExternalIdentifier((string) $project->client_id);
                     if ($clientId === null) {
                         throw new Exception('Client does not exist');

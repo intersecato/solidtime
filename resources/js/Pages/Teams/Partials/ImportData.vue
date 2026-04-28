@@ -14,8 +14,10 @@ import SecondaryButton from '@/packages/ui/src/Buttons/SecondaryButton.vue';
 import { initializeStores } from '@/utils/init';
 import { CardTitle } from '@/packages/ui/src';
 import Card from '@/Components/Common/Card.vue';
+import { isClientsEnabled } from '@/utils/features';
 
 const importTypeOptions = ref<ImportType[]>([]);
+const clientsEnabled = isClientsEnabled();
 
 const { addNotification } = useNotificationsStore();
 
@@ -128,7 +130,9 @@ const showResultModal = ref(false);
                 The import was successful! Here is an overview of the imported data:
             </div>
 
-            <div class="py-2.5 px-3 border-t border-t-card-background-separator">
+            <div
+                v-if="clientsEnabled"
+                class="py-2.5 px-3 border-t border-t-card-background-separator">
                 <span class="text-text-primary font-semibold">Clients created:</span>
                 {{ reportResult?.report.clients.created }}
             </div>

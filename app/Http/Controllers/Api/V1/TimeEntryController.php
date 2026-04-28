@@ -65,6 +65,11 @@ class TimeEntryController extends Controller
         return (bool) config('app.enable_billable', true);
     }
 
+    private function clientsEnabled(): bool
+    {
+        return (bool) config('app.enable_clients', true);
+    }
+
     private function assertNoOverlap(Organization $organization, Member $member, \Illuminate\Support\Carbon $start, ?\Illuminate\Support\Carbon $end, ?TimeEntry $exclude = null): void
     {
         if (! $organization->prevent_overlapping_time_entries) {
@@ -211,7 +216,9 @@ class TimeEntryController extends Controller
         $filter->addProjectIdsFilter($request->input('project_ids'));
         $filter->addTagIdsFilter($request->input('tag_ids'));
         $filter->addTaskIdsFilter($request->input('task_ids'));
-        $filter->addClientIdsFilter($request->input('client_ids'));
+        if ($this->clientsEnabled()) {
+            $filter->addClientIdsFilter($request->input('client_ids'));
+        }
         if ($this->billableEnabled()) {
             $filter->addBillableFilter($request->input('billable'));
         }
@@ -396,6 +403,10 @@ class TimeEntryController extends Controller
             $group1Type = $group1Type === TimeEntryAggregationType::Billable ? null : $group1Type;
             $group2Type = $group2Type === TimeEntryAggregationType::Billable ? null : $group2Type;
         }
+        if (! $this->clientsEnabled()) {
+            $group1Type = $group1Type === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $group1Type;
+            $group2Type = $group2Type === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $group2Type;
+        }
         $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $member);
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
@@ -454,6 +465,10 @@ class TimeEntryController extends Controller
         if (! $this->billableEnabled()) {
             $group = $group === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Project : $group;
             $subGroup = $subGroup === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Task : $subGroup;
+        }
+        if (! $this->clientsEnabled()) {
+            $group = $group === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $group;
+            $subGroup = $subGroup === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $subGroup;
         }
         $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $member);
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
@@ -580,7 +595,9 @@ class TimeEntryController extends Controller
         $filter->addProjectIdsFilter($request->input('project_ids'));
         $filter->addTagIdsFilter($request->input('tag_ids'));
         $filter->addTaskIdsFilter($request->input('task_ids'));
-        $filter->addClientIdsFilter($request->input('client_ids'));
+        if ($this->clientsEnabled()) {
+            $filter->addClientIdsFilter($request->input('client_ids'));
+        }
         if ($this->billableEnabled()) {
             $filter->addBillableFilter($request->input('billable'));
         }
@@ -616,7 +633,7 @@ class TimeEntryController extends Controller
         $this->assertNoOverlap($organization, $member, $start, $end);
 
         $project = $request->input('project_id') !== null ? Project::findOrFail((string) $request->input('project_id')) : null;
-        $client = $project?->client;
+        $client = $this->clientsEnabled() ? $project?->client : null;
         $task = $request->input('task_id') !== null ? $project->tasks()->findOrFail((string) $request->input('task_id')) : null;
 
         $timeEntry = new TimeEntry;
@@ -676,7 +693,7 @@ class TimeEntryController extends Controller
         $project = null;
         if ($request->has('project_id')) {
             $project = $request->input('project_id') !== null ? Project::findOrFail((string) $request->input('project_id')) : null;
-            $client = $project?->client;
+            $client = $this->clientsEnabled() ? $project?->client : null;
             $timeEntry->client()->associate($client);
         }
         $task = null;
@@ -751,7 +768,7 @@ class TimeEntryController extends Controller
         $overwriteClient = false;
         if ($request->has('changes.project_id')) {
             $project = $request->input('changes.project_id') !== null ? Project::findOrFail((string) $request->input('changes.project_id')) : null;
-            $client = $project?->client;
+            $client = $this->clientsEnabled() ? $project?->client : null;
             $overwriteClient = true;
         }
 

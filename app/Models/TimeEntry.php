@@ -124,6 +124,9 @@ class TimeEntry extends Model implements AuditableContract
                 $timeEntry->billable = false;
                 $timeEntry->billable_rate = null;
             }
+            if (! (bool) config('app.enable_clients', true)) {
+                $timeEntry->client_id = null;
+            }
         });
     }
 
@@ -146,8 +149,17 @@ class TimeEntry extends Model implements AuditableContract
         return (bool) config('app.enable_billable', true) && $value !== null ? (int) $value : null;
     }
 
+    public function getClientIdAttribute(mixed $value): ?string
+    {
+        return (bool) config('app.enable_clients', true) && $value !== null ? (string) $value : null;
+    }
+
     public function getClientIdComputed(): ?string
     {
+        if (! (bool) config('app.enable_clients', true)) {
+            return null;
+        }
+
         return $this->project_id === null || $this->project === null ? null : $this->project->client_id;
     }
 

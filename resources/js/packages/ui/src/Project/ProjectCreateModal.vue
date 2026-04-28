@@ -16,11 +16,12 @@ import EstimatedTimeSection from '@/packages/ui/src/EstimatedTimeSection.vue';
 import { Field, FieldGroup, FieldLabel } from '../field';
 import ProjectEditBillableSection from '@/packages/ui/src/Project/ProjectEditBillableSection.vue';
 import type { Client } from '@/packages/api/src';
-import { isBillableEnabled } from '@/utils/features';
+import { isBillableEnabled, isClientsEnabled } from '@/utils/features';
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
 const billableEnabled = isBillableEnabled();
+const clientsEnabled = isClientsEnabled();
 
 const props = defineProps<{
     clients: Client[];
@@ -48,6 +49,7 @@ const project = ref<CreateProjectBody>({
 async function submit() {
     await props.createProject({
         ...project.value,
+        client_id: clientsEnabled ? project.value.client_id : null,
         billable_rate: billableEnabled ? project.value.billable_rate : null,
         is_billable: billableEnabled && project.value.is_billable,
     });
@@ -104,7 +106,7 @@ const currentClientName = computed(() => {
                             @keydown.enter="submit()" />
                     </Field>
                 </FieldGroup>
-                <Field>
+                <Field v-if="clientsEnabled">
                     <FieldLabel for="client" :icon="UserCircleIcon">Client</FieldLabel>
                     <ClientDropdown
                         v-model="project.client_id"

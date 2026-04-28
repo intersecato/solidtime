@@ -9,7 +9,7 @@ import { useTagsQuery } from '@/utils/useTagsQuery';
 import { CheckCircleIcon, UserCircleIcon, UserGroupIcon } from '@heroicons/vue/20/solid';
 import { DocumentTextIcon, FolderIcon } from '@heroicons/vue/16/solid';
 import BillableIcon from '@/packages/ui/src/Icons/BillableIcon.vue';
-import { isBillableEnabled } from '@/utils/features';
+import { isBillableEnabled, isClientsEnabled } from '@/utils/features';
 
 export type GroupingOption =
     | 'project'
@@ -28,6 +28,7 @@ export const useReportingStore = defineStore('reporting', () => {
     const { clients } = useClientsQuery();
     const { tags } = useTagsQuery();
     const billableEnabled = isBillableEnabled();
+    const clientsEnabled = isClientsEnabled();
 
     const emptyPlaceholder = {
         user: 'No User',
@@ -59,7 +60,7 @@ export const useReportingStore = defineStore('reporting', () => {
         if (type === 'task') {
             return tasks.value.find((task) => task.id === key)?.name;
         }
-        if (type === 'client') {
+        if (type === 'client' && clientsEnabled) {
             return clients.value.find((client) => client.id === key)?.name;
         }
         if (type === 'tag') {
@@ -117,7 +118,9 @@ export const useReportingStore = defineStore('reporting', () => {
         },
     ];
     const groupByOptions = allGroupByOptions.filter(
-        (option) => billableEnabled || option.value !== 'billable'
+        (option) =>
+            (billableEnabled || option.value !== 'billable') &&
+            (clientsEnabled || option.value !== 'client')
     );
 
     return {

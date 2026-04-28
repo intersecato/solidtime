@@ -38,7 +38,7 @@ import { ref } from 'vue';
 import { useNotificationsStore } from '@/utils/notification';
 import { useTimeEntriesMutations } from '@/utils/useTimeEntriesMutations';
 import { useTimeEntriesInfiniteQuery } from '@/utils/useTimeEntriesInfiniteQuery';
-import { isBillableEnabled } from '@/utils/features';
+import { isBillableEnabled, isClientsEnabled } from '@/utils/features';
 
 const page = usePage<{
     auth: {
@@ -55,10 +55,12 @@ const currentTimeEntryStore = useCurrentTimeEntryStore();
 const { currentTimeEntry, isActive, now } = storeToRefs(currentTimeEntryStore);
 const { startLiveTimer, stopLiveTimer, setActiveState } = currentTimeEntryStore;
 const billableEnabled = isBillableEnabled();
+const clientsEnabled = isClientsEnabled();
 
 const { projects } = useProjectsQuery();
 const { tasks } = useTasksQuery();
 const { clients } = useClientsQuery();
+const activeClients = computed(() => (clientsEnabled ? clients.value : []));
 
 const emit = defineEmits<{
     change: [];
@@ -108,6 +110,8 @@ async function createProject(project: CreateProjectBody): Promise<Project | unde
     return newProject;
 }
 async function createClient(client: CreateClientBody) {
+    if (!clientsEnabled) return undefined;
+
     return await useClientsStore().createClient(client);
 }
 
@@ -172,7 +176,7 @@ const { tags } = useTagsQuery();
         :projects
         :tasks
         :tags
-        :clients></TimeEntryCreateModal>
+        :clients="activeClients"></TimeEntryCreateModal>
     <CardTitle title="Time Tracker" :icon="ClockIcon"></CardTitle>
     <div class="relative pt-1.5">
         <TimeTrackerRunningInDifferentOrganizationOverlay
@@ -192,7 +196,7 @@ const { tags } = useTagsQuery();
                         :can-create-project="canCreateProjects()"
                         :organization-billable-rate="organization?.billable_rate ?? null"
                         :create-client
-                        :clients
+                        :clients="activeClients"
                         :tags
                         :tasks
                         :projects

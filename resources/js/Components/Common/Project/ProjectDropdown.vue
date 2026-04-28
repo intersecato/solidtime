@@ -22,6 +22,7 @@ import { isAllowedToPerformPremiumAction } from '@/utils/billing';
 import { canCreateProjects } from '@/utils/permissions';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
+import { isClientsEnabled } from '@/utils/features';
 
 const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
 const searchValue = ref('');
@@ -34,8 +35,11 @@ const showCreateProject = ref(false);
 const { projects } = useProjectsQuery();
 const { clients } = useClientsQuery();
 const emit = defineEmits(['update:modelValue', 'changed']);
+const clientsEnabled = isClientsEnabled();
 
-const activeClients = computed(() => clients.value.filter((c) => !c.is_archived));
+const activeClients = computed(() =>
+    clientsEnabled ? clients.value.filter((c) => !c.is_archived) : []
+);
 
 const sortedProjects = ref<Project[]>([]);
 
@@ -55,6 +59,8 @@ async function handleCreateProject(projectBody: CreateProjectBody) {
 }
 
 async function handleCreateClient(clientBody: CreateClientBody) {
+    if (!clientsEnabled) return undefined;
+
     return await useClientsStore().createClient(clientBody);
 }
 

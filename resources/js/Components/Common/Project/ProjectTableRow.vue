@@ -35,6 +35,7 @@ const { tasks } = useTasksQuery();
 const props = defineProps<{
     project: Project;
     showBillableRate: boolean;
+    showClients: boolean;
 }>();
 
 const client = computed(() => {
@@ -98,7 +99,9 @@ const showEditProjectModal = ref(false);
                     </span>
                     <span class="text-text-secondary"> {{ projectTasksCount }} Tasks </span>
                 </div>
-                <div class="whitespace-nowrap min-w-0 px-3 py-4 text-sm text-text-primary">
+                <div
+                    v-if="showClients"
+                    class="whitespace-nowrap min-w-0 px-3 py-4 text-sm text-text-primary">
                     <div v-if="project.client_id" class="overflow-ellipsis overflow-hidden">
                         {{ client?.name }}
                     </div>

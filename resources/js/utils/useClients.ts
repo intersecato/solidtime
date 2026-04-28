@@ -4,12 +4,15 @@ import type { CreateClientBody, Client, UpdateClientBody } from '@/packages/api/
 import { getCurrentOrganizationId } from '@/utils/useUser';
 import { useNotificationsStore } from '@/utils/notification';
 import { useQueryClient } from '@tanstack/vue-query';
+import { isClientsEnabled } from '@/utils/features';
 
 export const useClientsStore = defineStore('clients', () => {
     const { handleApiRequestNotifications } = useNotificationsStore();
     const queryClient = useQueryClient();
 
     async function createClient(clientBody: CreateClientBody): Promise<Client | undefined> {
+        if (!isClientsEnabled()) return undefined;
+
         const organization = getCurrentOrganizationId();
         if (organization) {
             const response = await handleApiRequestNotifications(
@@ -28,6 +31,8 @@ export const useClientsStore = defineStore('clients', () => {
     }
 
     async function updateClient(clientId: string, clientBody: UpdateClientBody) {
+        if (!isClientsEnabled()) return;
+
         const organization = getCurrentOrganizationId();
         if (organization) {
             await handleApiRequestNotifications(
@@ -46,6 +51,8 @@ export const useClientsStore = defineStore('clients', () => {
     }
 
     async function deleteClient(clientId: string) {
+        if (!isClientsEnabled()) return;
+
         const organization = getCurrentOrganizationId();
         if (organization) {
             await handleApiRequestNotifications(

@@ -22,7 +22,7 @@ import ProjectEditBillableSection from '@/packages/ui/src/Project/ProjectEditBil
 import { isAllowedToPerformPremiumAction } from '@/utils/billing';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
-import { isBillableEnabled } from '@/utils/features';
+import { isBillableEnabled, isClientsEnabled } from '@/utils/features';
 
 const { updateProject } = useProjectsStore();
 const { clients } = useClientsQuery();
@@ -31,6 +31,7 @@ const show = defineModel('show', { default: false });
 const saving = ref(false);
 const showBillableRateModal = ref(false);
 const billableEnabled = isBillableEnabled();
+const clientsEnabled = isClientsEnabled();
 const props = defineProps<{
     originalProject: Project;
 }>();
@@ -58,6 +59,7 @@ async function submit() {
     }
     await updateProject(props.originalProject.id, {
         ...project.value,
+        client_id: clientsEnabled ? project.value.client_id : null,
         billable_rate: billableEnabled ? project.value.billable_rate : null,
         is_billable: billableEnabled && project.value.is_billable,
     });
@@ -78,6 +80,7 @@ const currentClientName = computed(() => {
 async function submitBillableRate() {
     await updateProject(props.originalProject.id, {
         ...project.value,
+        client_id: clientsEnabled ? project.value.client_id : null,
         billable_rate: billableEnabled ? project.value.billable_rate : null,
         is_billable: billableEnabled && project.value.is_billable,
     });
@@ -115,7 +118,7 @@ async function submitBillableRate() {
                             @keydown.enter="submit()" />
                     </Field>
                 </FieldGroup>
-                <Field>
+                <Field v-if="clientsEnabled">
                     <FieldLabel for="client" :icon="UserCircleIcon">Client</FieldLabel>
                     <ClientDropdown v-model="project.client_id" :create-client :clients="clients">
                         <template #trigger>

@@ -15,6 +15,7 @@ import { PlusIcon, PlusCircleIcon, MinusIcon, XMarkIcon } from '@heroicons/vue/1
 import ProjectCreateModal from '@/packages/ui/src/Project/ProjectCreateModal.vue';
 import { twMerge } from 'tailwind-merge';
 import { Button } from '@/packages/ui/src/Buttons';
+import { isClientsEnabled } from '@/utils/features';
 
 const task = defineModel<string | null>('task', {
     default: null,
@@ -75,6 +76,7 @@ const props = withDefaults(
 );
 
 const filteredResults = ref<ClientsWithProjectsWithTasks>([]);
+const clientsEnabled = isClientsEnabled();
 
 // computed filterProjects that flattens the first layer of filteredResults and combines all the projects
 const filteredProjects = computed<ProjectWithTasks[]>(() => {
@@ -87,6 +89,36 @@ function addProjectToFilterObject(
     filteredTasks: Task[],
     expanded = false
 ) {
+    if (!clientsEnabled) {
+        const projectGroupIndex = tempFilteredClients.findIndex((client) => client.id === 'projects');
+        if (projectGroupIndex !== -1) {
+            tempFilteredClients[projectGroupIndex]!.projects.push({
+                ...project,
+                expanded: expanded,
+                tasks: filteredTasks,
+            });
+        } else {
+            tempFilteredClients.push({
+                id: 'projects',
+                name: '',
+                color: 'var(--theme-color-icon-default)',
+                created_at: '',
+                updated_at: '',
+                value: '',
+                is_archived: false,
+                projects: [
+                    {
+                        ...project,
+                        expanded: expanded,
+                        tasks: filteredTasks,
+                    },
+                ],
+            });
+        }
+
+        return;
+    }
+
     // check if client already exists in filter array
     const projectClientIndex = tempFilteredClients.findIndex(
         (client) => client.id === project.client_id
@@ -187,10 +219,12 @@ function updateFilteredResults() {
             .toLowerCase()
             .includes(searchValue.value?.toLowerCase()?.trim() || '');
 
-        const clientNameIncludesSearchTerm = props.clients
-            .find((client) => client.id === filterProject.client_id)
-            ?.name.toLowerCase()
-            .includes(searchValue.value?.toLowerCase()?.trim() || '');
+        const clientNameIncludesSearchTerm =
+            clientsEnabled &&
+            props.clients
+                .find((client) => client.id === filterProject.client_id)
+                ?.name.toLowerCase()
+                .includes(searchValue.value?.toLowerCase()?.trim() || '');
 
         // check if one of the project tasks
         const projectTasks = props.tasks.filter((task) => {
@@ -564,7 +598,7 @@ const showCreateProject = ref(false);
                     @mousemove="mouseEnterHighlightActivated = true">
                     <template v-for="client in filteredResults" :key="client.id">
                         <div
-                            v-if="client.id !== 'no_project_no_client'"
+                            v-if="clientsEnabled && client.id !== 'no_project_no_client'"
                             class="w-full pb-1 pt-2 px-2 text-text-tertiary text-xs font-semibold flex space-x-1 items-center">
                             <span>
                                 {{ client.name }}
@@ -663,7 +697,7 @@ const showCreateProject = ref(false);
         :enable-estimated-time="enableEstimatedTime"
         :organization-billable-rate="organizationBillableRate"
         :currency="currency"
-        :clients="clients"
+        :clients="clientsEnabled ? clients : []"
         :create-project
         :initial-project-name="searchValue"></ProjectCreateModal>
 </template>

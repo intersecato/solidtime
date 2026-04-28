@@ -27,6 +27,10 @@ class DetailedReportResource extends BaseResource
             $group = $group === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Project : $group;
             $subGroup = $subGroup === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Task : $subGroup;
         }
+        if (! (bool) config('app.enable_clients', true)) {
+            $group = $group === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $group;
+            $subGroup = $subGroup === TimeEntryAggregationType::Client ? TimeEntryAggregationType::Project : $subGroup;
+        }
 
         return [
             /** @var string $id ID of the report */
@@ -61,7 +65,9 @@ class DetailedReportResource extends BaseResource
                     ? $this->resource->properties->billable
                     : null,
                 /** @var array<string>|null $client_ids Filter by client IDs, client IDs are OR combined */
-                'client_ids' => $this->resource->properties->clientIds?->toArray(),
+                'client_ids' => (bool) config('app.enable_clients', true)
+                    ? $this->resource->properties->clientIds?->toArray()
+                    : null,
                 /** @var array<string>|null $project_ids Filter by project IDs, project IDs are OR combined */
                 'project_ids' => $this->resource->properties->projectIds?->toArray(),
                 /** @var array<string>|null $tags_ids Filter by tag IDs, tag IDs are OR combined */
