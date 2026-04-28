@@ -90,6 +90,8 @@ return [
 
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
+    'user_timezone' => env('APP_USER_TIMEZONE', 'UTC'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

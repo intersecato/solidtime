@@ -96,7 +96,7 @@ class CreateNewUser implements CreatesNewUsers
                 $input['name'],
                 $input['email'],
                 $input['password'],
-                $timezone ?? 'UTC',
+                $timezone ?? (string) config('app.user_timezone', 'UTC'),
                 $startOfWeek,
                 $currency,
                 $numberFormat,

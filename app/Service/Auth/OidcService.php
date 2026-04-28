@@ -387,7 +387,7 @@ class OidcService
             $name,
             $email,
             Str::random(64),
-            config('app.timezone', 'UTC'),
+            (string) config('app.user_timezone', 'UTC'),
             Weekday::Monday,
             null,
             null,

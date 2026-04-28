@@ -62,7 +62,7 @@ class UserCreateCommand extends Command
                 $name,
                 $email,
                 $password,
-                'UTC',
+                (string) config('app.user_timezone', 'UTC'),
                 Weekday::Monday,
                 null,
                 verifyEmail: $verifyEmail

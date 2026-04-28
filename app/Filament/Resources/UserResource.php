@@ -82,6 +82,7 @@ class UserResource extends Resource
                 Forms\Components\Select::make('timezone')
                     ->label('Timezone')
                     ->options(fn (): array => app(TimezoneService::class)->getSelectOptions())
+                    ->default((string) config('app.user_timezone', 'UTC'))
                     ->searchable()
                     ->required(),
                 Forms\Components\Select::make('week_start')
