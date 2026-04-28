@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
+use App\Enums\Role;
+use App\Models\Member;
 use App\Models\Organization;
 use App\Models\User;
 use App\Service\PermissionStore;
@@ -47,7 +49,15 @@ class OrganizationPolicy
             return true;
         }
 
-        return true;
+        if ($user->current_team_id === null) {
+            return false;
+        }
+
+        return Member::query()
+            ->whereBelongsTo($user, 'user')
+            ->where('organization_id', $user->current_team_id)
+            ->whereIn('role', [Role::Owner->value, Role::Admin->value])
+            ->exists();
     }
 
     /**
