@@ -26,6 +26,7 @@ use Facile\OpenIDClient\Session\AuthSessionInterface;
 use Facile\OpenIDClient\Token\TokenSetInterface;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\HttpFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -376,11 +377,11 @@ class OidcService
             return $this->syncProfilePhotoIfNeeded($user, $claims);
         }
 
-        if (! (bool) config('services.oidc.auto_register')) {
+        $name = $this->nameFromClaims($claims, $email);
+
+        if (! (bool) config('services.oidc.auto_register') && ! $this->hasMatchingInvitation($email, $name)) {
             throw new RuntimeException('OIDC auto-registration is disabled.');
         }
-
-        $name = $this->nameFromClaims($claims, $email);
 
         $user = $this->userService->createUser(
             $name,
@@ -413,17 +414,24 @@ class OidcService
         return $name !== '' ? $name : $fallbackEmail;
     }
 
+    private function hasMatchingInvitation(string $email, string $name): bool
+    {
+        $normalizedName = $this->normalizeName($name);
+
+        return OrganizationInvitation::query()
+            ->where(function (Builder $query) use ($email, $normalizedName): void {
+                $this->addMatchingInvitationConstraints($query, $email, $normalizedName);
+            })
+            ->exists();
+    }
+
     private function acceptMatchingInvitations(User $user, string $email, string $name): void
     {
         $normalizedName = $this->normalizeName($name);
         $invitations = OrganizationInvitation::query()
             ->with('organization')
-            ->where(function ($query) use ($email, $normalizedName): void {
-                $query->where('email', '=', $email)
-                    ->orWhere(function ($query) use ($normalizedName): void {
-                        $query->whereNull('email')
-                            ->whereRaw('lower(name) = ?', [$normalizedName]);
-                    });
+            ->where(function (Builder $query) use ($email, $normalizedName): void {
+                $this->addMatchingInvitationConstraints($query, $email, $normalizedName);
             })
             ->get();
 
@@ -444,6 +452,15 @@ class OidcService
 
             $invitation->delete();
         }
+    }
+
+    private function addMatchingInvitationConstraints(Builder $query, string $email, string $normalizedName): void
+    {
+        $query->where('email', '=', $email)
+            ->orWhere(function (Builder $query) use ($normalizedName): void {
+                $query->whereNull('email')
+                    ->whereRaw('lower(name) = ?', [$normalizedName]);
+            });
     }
 
     private function normalizeName(string $name): string
