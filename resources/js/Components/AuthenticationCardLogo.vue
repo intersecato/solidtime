@@ -1,10 +1,23 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
+import { Link, usePage } from '@inertiajs/vue3';
+
+const page = usePage<{
+    app?: {
+        login_logo_url?: string | null;
+        login_logo_alt?: string | null;
+    };
+}>();
 </script>
 
 <template>
     <Link :href="'/'">
+        <img
+            v-if="page.props.app?.login_logo_url"
+            :src="page.props.app.login_logo_url"
+            :alt="page.props.app.login_logo_alt ?? 'Logo'"
+            class="h-12 max-w-56 object-contain" />
         <svg
+            v-else
             class="h-12 py-2 text-text-primary"
             viewBox="0 0 168 30"
             fill="none"

@@ -119,6 +119,10 @@ return [
 
     'password_login_enabled' => (bool) env('AUTH_PASSWORD_LOGIN_ENABLED', true),
 
+    'login_logo_url' => env('AUTH_LOGIN_LOGO_URL'),
+
+    'login_logo_alt' => env('AUTH_LOGIN_LOGO_ALT', env('APP_NAME', 'solidtime')),
+
     'terms_url' => env('TERMS_URL', ''),
 
     'privacy_policy_url' => env('PRIVACY_POLICY_URL', ''),

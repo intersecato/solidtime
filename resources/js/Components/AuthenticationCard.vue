@@ -2,6 +2,10 @@
 import { onMounted } from 'vue';
 import { useTheme } from '@/utils/theme.js';
 
+defineProps<{
+    unframed?: boolean;
+}>();
+
 onMounted(async () => {
     useTheme();
 });
@@ -15,6 +19,13 @@ onMounted(async () => {
         </div>
 
         <div
+            v-if="unframed"
+            class="w-full sm:max-w-md mt-6 px-6 overflow-hidden">
+            <slot />
+        </div>
+
+        <div
+            v-else
             class="w-full sm:max-w-md mt-6 px-6 py-4 bg-card-background shadow-md border border-card-border overflow-hidden sm:rounded-lg">
             <slot />
         </div>

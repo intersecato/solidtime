@@ -27,6 +27,10 @@ class ShareInertiaData
         /** @var PermissionStore $permissions */
         $permissions = app(PermissionStore::class);
         Inertia::share([
+            'app' => [
+                'login_logo_url' => config('auth.login_logo_url'),
+                'login_logo_alt' => config('auth.login_logo_alt'),
+            ],
             'jetstream' => function () use ($request) {
                 /** @var User|null $user */
                 $user = $request->user();

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import AuthenticationCard from '@/Components/AuthenticationCard.vue';
 import AuthenticationCardLogo from '@/Components/AuthenticationCardLogo.vue';
 import { Field, FieldLabel, FieldError } from '@/packages/ui/src/field';
 import PrimaryButton from '@/packages/ui/src/Buttons/PrimaryButton.vue';
 import TextInput from '@/packages/ui/src/Input/TextInput.vue';
 
-defineProps<{
+const props = defineProps<{
     canResetPassword?: boolean;
     canRegister?: boolean;
     passwordLoginEnabled?: boolean;
@@ -38,12 +39,20 @@ const page = usePage<{
         message: string;
     };
 }>();
+
+const unframedSsoOnly = computed(
+    () =>
+        !props.passwordLoginEnabled &&
+        props.oidc?.enabled === true &&
+        typeof props.oidc.url === 'string' &&
+        props.oidc.url !== ''
+);
 </script>
 
 <template>
     <Head title="Log in" />
 
-    <AuthenticationCard>
+    <AuthenticationCard :unframed="unframedSsoOnly">
         <template #logo>
             <AuthenticationCardLogo />
         </template>
