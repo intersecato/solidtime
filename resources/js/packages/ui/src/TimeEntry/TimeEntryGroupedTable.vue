@@ -15,10 +15,12 @@ import TimeEntryAggregateRow from '@/packages/ui/src/TimeEntry/TimeEntryAggregat
 import TimeEntryRowHeading from '@/packages/ui/src/TimeEntry/TimeEntryRowHeading.vue';
 import TimeEntryRow from '@/packages/ui/src/TimeEntry/TimeEntryRow.vue';
 import type { TimeEntriesGroupedByType } from '@/types/time-entries';
+import { isBillableEnabled } from '@/utils/features';
 
 const selectedTimeEntries = defineModel<TimeEntry[]>('selected', {
     default: [],
 });
+const billableEnabled = isBillableEnabled();
 
 const props = withDefaults(
     defineProps<{
@@ -74,7 +76,7 @@ const groupedTimeEntries = computed(() => {
                 (e) =>
                     e.project_id === entry.project_id &&
                     e.task_id === entry.task_id &&
-                    e.billable === entry.billable &&
+                    (!billableEnabled || e.billable === entry.billable) &&
                     e.description === entry.description
             );
             if (oldEntriesIndex !== -1 && newDailyEntries[oldEntriesIndex]) {
@@ -112,7 +114,7 @@ function startTimeEntryFromExisting(entry: TimeEntry) {
         task_id: entry.task_id,
         start: getDayJsInstance().utc().format(),
         end: null,
-        billable: entry.billable,
+        billable: billableEnabled && entry.billable,
         description: entry.description,
         tags: [...entry.tags],
     });

@@ -138,6 +138,10 @@ class ChartController extends Controller
     public function totalWeeklyBillableTime(Organization $organization, DashboardService $dashboardService): JsonResponse
     {
         $this->checkPermission($organization, 'charts:view:own');
+        if (! (bool) config('app.enable_billable', true)) {
+            return response()->json(0);
+        }
+
         $user = $this->user();
 
         $totalWeeklyBillableTime = $dashboardService->totalWeeklyBillableTime($user, $organization);
@@ -157,6 +161,13 @@ class ChartController extends Controller
     public function totalWeeklyBillableAmount(Organization $organization, DashboardService $dashboardService): JsonResponse
     {
         $this->checkPermission($organization, 'charts:view:own');
+        if (! (bool) config('app.enable_billable', true)) {
+            return response()->json([
+                'value' => 0,
+                'currency' => $organization->currency,
+            ]);
+        }
+
         $user = $this->user();
 
         $showBillableRate = $this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates;

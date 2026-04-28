@@ -10,6 +10,7 @@ import {
     getSortedRowModel,
     type SortingState,
 } from '@tanstack/vue-table';
+import { isBillableEnabled } from '@/utils/features';
 
 export type SortColumn = 'name' | 'email' | 'role' | 'billable_rate' | 'status';
 export type SortDirection = 'asc' | 'desc';
@@ -24,6 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const { members } = useMembersQuery();
+const billableEnabled = isBillableEnabled();
 
 const roleOrder: Record<string, number> = {
     owner: 0,
@@ -106,7 +108,11 @@ const sortedMembers = computed(() => {
             <div
                 data-testid="member_table"
                 class="grid min-w-full"
-                style="grid-template-columns: 1fr 1fr 180px 180px 150px 130px">
+                :style="{
+                    gridTemplateColumns: billableEnabled
+                        ? '1fr 1fr 180px 180px 150px 130px'
+                        : '1fr 1fr 180px 150px 130px',
+                }">
                 <MemberTableHeading
                     :sort-column="props.sortColumn"
                     :sort-direction="props.sortDirection"

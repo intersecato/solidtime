@@ -39,6 +39,7 @@ import {
     type CommandGroup as CommandGroupType,
 } from '@/utils/commandPaletteCommands';
 import { usePage } from '@inertiajs/vue3';
+import { isBillableEnabled } from '@/utils/features';
 import type { Organization, User } from '@/types/models';
 import { switchOrganization } from '@/utils/useOrganization';
 import type {
@@ -180,7 +181,7 @@ export function useCommandPalette() {
         currentTimeEntry.value.project_id = lastTimeEntry.value.project_id;
         currentTimeEntry.value.task_id = lastTimeEntry.value.task_id;
         currentTimeEntry.value.tags = lastTimeEntry.value.tags;
-        currentTimeEntry.value.billable = lastTimeEntry.value.billable;
+        currentTimeEntry.value.billable = isBillableEnabled() && lastTimeEntry.value.billable;
         currentTimeEntry.value.start = getDayJsInstance()().utc().format();
         await setActiveState(true);
     }
@@ -202,6 +203,7 @@ export function useCommandPalette() {
     }
 
     async function toggleBillable() {
+        if (!isBillableEnabled()) return;
         closePaletteAfterAction();
         currentTimeEntry.value.billable = !currentTimeEntry.value.billable;
         await updateTimer();

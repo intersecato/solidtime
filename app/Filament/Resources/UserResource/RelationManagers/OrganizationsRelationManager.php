@@ -42,6 +42,7 @@ class OrganizationsRelationManager extends RelationManager
                 TextColumn::make('role'),
                 TextColumn::make('membership.billable_rate')
                     ->label('Billable rate')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->money(fn (Organization $resource) => $resource->currency, divideBy: 100),
             ])
             ->headerActions([

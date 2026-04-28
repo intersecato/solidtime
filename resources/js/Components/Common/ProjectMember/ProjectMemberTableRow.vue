@@ -10,12 +10,14 @@ import { capitalizeFirstLetter } from '@/utils/format';
 import ProjectMemberEditModal from '@/Components/Common/ProjectMember/ProjectMemberEditModal.vue';
 import { getOrganizationCurrencyString } from '@/utils/money';
 import type { Organization } from '@/packages/api/src';
+import { isBillableEnabled } from '@/utils/features';
 
 const props = defineProps<{
     projectMember: ProjectMember;
 }>();
 
 const organization = inject<ComputedRef<Organization>>('organization');
+const billableEnabled = isBillableEnabled();
 
 function deleteProjectMember() {
     useProjectMembersStore().deleteProjectMember(
@@ -47,7 +49,9 @@ const showEditModal = ref(false);
                 {{ member?.name }}
             </span>
         </div>
-        <div class="whitespace-nowrap px-3 py-4 text-sm text-text-secondary">
+        <div
+            v-if="billableEnabled"
+            class="whitespace-nowrap px-3 py-4 text-sm text-text-secondary">
             {{
                 projectMember.billable_rate
                     ? formatCents(

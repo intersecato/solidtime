@@ -31,6 +31,7 @@ import {
 } from '@/packages/ui/src';
 import { PlayIcon, TrashIcon } from '@heroicons/vue/20/solid';
 import { twMerge } from 'tailwind-merge';
+import { isBillableEnabled } from '@/utils/features';
 const props = defineProps<{
     timeEntry: TimeEntriesGroupedByType;
     projects: Project[];
@@ -57,6 +58,7 @@ const emit = defineEmits<{
 }>();
 
 const organization = inject<ComputedRef<Organization>>('organization');
+const billableEnabled = isBillableEnabled();
 
 function updateTimeEntryDescription(description: string) {
     props.updateTimeEntries(
@@ -75,7 +77,7 @@ function updateTimeEntryTags(tags: string[]) {
 function updateTimeEntryBillable(billable: boolean) {
     props.updateTimeEntries(
         props.timeEntry.timeEntries.map((timeEntry: TimeEntry) => timeEntry.id),
-        { billable: billable }
+        { billable: billableEnabled && billable }
     );
 }
 
@@ -152,6 +154,7 @@ function onSelectChange(checked: boolean) {
                                 :model-value="timeEntry.tags"
                                 @changed="updateTimeEntryTags"></TimeEntryRowTagDropdown>
                             <BillableToggleButton
+                                v-if="billableEnabled"
                                 :model-value="timeEntry.billable"
                                 size="small"
                                 faded
@@ -255,6 +258,7 @@ function onSelectChange(checked: boolean) {
                                         compact
                                         @changed="updateTimeEntryTags"></TimeEntryRowTagDropdown>
                                     <BillableToggleButton
+                                        v-if="billableEnabled"
                                         :model-value="timeEntry.billable"
                                         size="small"
                                         @changed="updateTimeEntryBillable"></BillableToggleButton>

@@ -67,6 +67,7 @@ import ReportingFilterBar from '@/Components/Common/Reporting/ReportingFilterBar
 import { useTimeEntriesReportQuery } from '@/utils/useTimeEntriesReportQuery';
 import { useTimeEntriesMutations } from '@/utils/useTimeEntriesMutations';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
+import { isBillableEnabled } from '@/utils/features';
 
 // TimeEntryRoundingType is now defined in ReportingRoundingControls component
 type TimeEntryRoundingType = 'up' | 'down' | 'nearest';
@@ -85,6 +86,7 @@ const selectedMembers = ref<string[]>([]);
 const selectedTasks = ref<string[]>([]);
 const selectedClients = ref<string[]>([]);
 const billable = ref<'true' | 'false' | null>(null);
+const billableEnabled = isBillableEnabled();
 const roundingEnabled = ref<boolean>(false);
 const roundingType = ref<TimeEntryRoundingType>('nearest');
 const roundingMinutes = ref<number>(15);
@@ -115,7 +117,7 @@ function getFilterAttributes() {
         task_ids: selectedTasks.value.length > 0 ? selectedTasks.value : undefined,
         client_ids: selectedClients.value.length > 0 ? selectedClients.value : undefined,
         tag_ids: selectedTags.value.length > 0 ? selectedTags.value : undefined,
-        billable: billable.value !== null ? billable.value : undefined,
+        billable: billableEnabled && billable.value !== null ? billable.value : undefined,
         rounding_type: roundingEnabled.value ? roundingType.value : undefined,
         rounding_minutes: roundingEnabled.value ? roundingMinutes.value : undefined,
     };
@@ -207,7 +209,7 @@ async function startTimeEntryFromExisting(entry: TimeEntry) {
         task_id: entry.task_id,
         start: getDayJsInstance().utc().format(),
         end: null,
-        billable: entry.billable,
+        billable: billableEnabled && entry.billable,
         description: entry.description,
     });
     startLiveTimer();

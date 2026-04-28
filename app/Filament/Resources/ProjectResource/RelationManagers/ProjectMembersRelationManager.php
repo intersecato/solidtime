@@ -32,6 +32,7 @@ class ProjectMembersRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\TextColumn::make('user.name'),
                 Tables\Columns\TextColumn::make('billable_rate')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->numeric()
                     ->sortable(),
             ])

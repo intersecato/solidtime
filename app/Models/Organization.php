@@ -109,6 +109,26 @@ class Organization extends JetstreamTeam implements AuditableContract
     protected $attributes = [
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Organization $organization): void {
+            if (! (bool) config('app.enable_billable', true)) {
+                $organization->billable_rate = null;
+                $organization->employees_can_see_billable_rates = false;
+            }
+        });
+    }
+
+    public function getBillableRateAttribute(mixed $value): ?int
+    {
+        return (bool) config('app.enable_billable', true) && $value !== null ? (int) $value : null;
+    }
+
+    public function getEmployeesCanSeeBillableRatesAttribute(mixed $value): bool
+    {
+        return (bool) config('app.enable_billable', true) && (bool) $value;
+    }
+
     /**
      * Get all the non-placeholder users of the organization including its owner.
      *

@@ -104,18 +104,31 @@ const aggregatedGraphTimeEntries = computed(() => {
 });
 
 const group = computed(() => {
+    if (aggregatedTableTimeEntries.value?.grouped_type) {
+        return aggregatedTableTimeEntries.value.grouped_type;
+    }
     if (sharedReportResponseData.value) {
         return sharedReportResponseData.value?.properties.group;
     }
-    return 'billable';
+    return 'project';
 });
 
 const subGroup = computed(() => {
+    const groupedData = aggregatedTableTimeEntries.value?.grouped_data;
+    const groupedType = groupedData?.find((entry) => entry.grouped_type)?.grouped_type;
+    if (groupedType) {
+        return groupedType;
+    }
     if (sharedReportResponseData.value) {
         return sharedReportResponseData.value?.properties.sub_group;
     }
     return 'project';
 });
+
+const showCost = computed(() => aggregatedTableTimeEntries.value?.cost !== null);
+const tableGridStyle = computed(
+    () => `grid-template-columns: 1fr 100px${showCost.value ? ' 150px' : ''}`
+);
 const { emptyPlaceholder } = useReportingStore();
 
 const groupedPieChartData = computed(() => {
@@ -205,12 +218,16 @@ onMounted(async () => {
                         and
                         <strong class="px-2">{{ getGroupLabel(subGroup) }}</strong>
                     </div>
-                    <div class="grid items-center" style="grid-template-columns: 1fr 100px 150px">
+                    <div
+                        class="grid items-center"
+                        :style="tableGridStyle">
                         <div
                             class="contents [&>*]:border-card-background-separator [&>*]:border-b [&>*]:bg-tertiary [&>*]:pb-1.5 [&>*]:pt-1 text-text-secondary text-sm">
                             <div class="pl-6">Name</div>
-                            <div class="text-right">Duration</div>
-                            <div class="text-right pr-6">Cost</div>
+                            <div class="text-right" :class="!showCost ? 'pr-6' : ''">
+                                Duration
+                            </div>
+                            <div v-if="showCost" class="text-right pr-6">Cost</div>
                         </div>
                         <template
                             v-if="
@@ -222,14 +239,16 @@ onMounted(async () => {
                                 :key="entry.description ?? 'none'"
                                 :currency="reportCurrency"
                                 :currency-format="reportCurrencyFormat"
-                                :show-cost="true"
+                                :show-cost="showCost"
                                 :entry="entry"></ReportingRow>
                             <div
                                 class="contents [&>*]:transition text-text-tertiary [&>*]:h-[50px]">
                                 <div class="flex items-center pl-6 font-medium">
                                     <span>Total</span>
                                 </div>
-                                <div class="justify-end flex items-center font-medium">
+                                <div
+                                    class="justify-end flex items-center font-medium"
+                                    :class="!showCost ? 'pr-6' : ''">
                                     {{
                                         formatReportingDuration(
                                             aggregatedTableTimeEntries.seconds,
@@ -238,7 +257,9 @@ onMounted(async () => {
                                         )
                                     }}
                                 </div>
-                                <div class="justify-end pr-6 flex items-center font-medium">
+                                <div
+                                    v-if="showCost"
+                                    class="justify-end pr-6 flex items-center font-medium">
                                     {{
                                         aggregatedTableTimeEntries.cost
                                             ? formatCents(

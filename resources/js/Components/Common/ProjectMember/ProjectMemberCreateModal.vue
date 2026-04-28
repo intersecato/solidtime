@@ -9,9 +9,11 @@ import { useProjectMembersStore } from '@/utils/useProjectMembers';
 import MemberCombobox from '@/Components/Common/Member/MemberCombobox.vue';
 import BillableRateInput from '@/packages/ui/src/Input/BillableRateInput.vue';
 import { getOrganizationCurrencyString } from '@/utils/money';
+import { isBillableEnabled } from '@/utils/features';
 const { createProjectMember } = useProjectMembersStore();
 const show = defineModel('show', { default: false });
 const saving = ref(false);
+const billableEnabled = isBillableEnabled();
 
 const props = defineProps<{
     projectId: string;
@@ -24,7 +26,10 @@ const projectMember = ref<CreateProjectMemberBody>({
 });
 
 async function submit() {
-    await createProjectMember(props.projectId, projectMember.value);
+    await createProjectMember(props.projectId, {
+        ...projectMember.value,
+        billable_rate: billableEnabled ? projectMember.value.billable_rate : null,
+    });
     show.value = false;
     projectMember.value = {
         member_id: '',
@@ -47,12 +52,12 @@ useFocus(projectNameInput, { initialValue: true });
 
         <template #content>
             <div class="grid grid-cols-3 items-center space-x-4">
-                <div class="col-span-3 sm:col-span-2">
+                <div :class="billableEnabled ? 'col-span-3 sm:col-span-2' : 'col-span-3'">
                     <MemberCombobox
                         v-model="projectMember.member_id"
                         :hidden-members="props.existingMembers"></MemberCombobox>
                 </div>
-                <div class="col-span-3 sm:col-span-1 flex-1">
+                <div v-if="billableEnabled" class="col-span-3 sm:col-span-1 flex-1">
                     <BillableRateInput
                         v-model="projectMember.billable_rate"
                         name="billable_rate"

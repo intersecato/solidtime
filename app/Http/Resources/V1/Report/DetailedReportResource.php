@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\V1\Report;
 
+use App\Enums\TimeEntryAggregationType;
 use App\Http\Resources\V1\BaseResource;
 use App\Models\Report;
 use Illuminate\Http\Request;
@@ -20,6 +21,13 @@ class DetailedReportResource extends BaseResource
      */
     public function toArray(Request $request): array
     {
+        $group = $this->resource->properties->group;
+        $subGroup = $this->resource->properties->subGroup;
+        if (! (bool) config('app.enable_billable', true)) {
+            $group = $group === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Project : $group;
+            $subGroup = $subGroup === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Task : $subGroup;
+        }
+
         return [
             /** @var string $id ID of the report */
             'id' => $this->resource->id,
@@ -35,9 +43,9 @@ class DetailedReportResource extends BaseResource
             'shareable_link' => $this->resource->getShareableLink(),
             'properties' => [
                 /** @var string $group Type of first grouping */
-                'group' => $this->resource->properties->group->value,
+                'group' => $group->value,
                 /** @var string $sub_group Type of second grouping */
-                'sub_group' => $this->resource->properties->subGroup->value,
+                'sub_group' => $subGroup->value,
                 /** @var string $history_group Type of grouping of the historic aggregation (time chart) */
                 'history_group' => $this->resource->properties->historyGroup->value,
                 /** @var string $start Start date of the report */
@@ -49,7 +57,9 @@ class DetailedReportResource extends BaseResource
                 /** @var array<string>|null $member_ids Filter by multiple member IDs, member IDs are OR combined */
                 'member_ids' => $this->resource->properties->memberIds?->toArray(),
                 /** @var bool|null $billable Filter by billable status */
-                'billable' => $this->resource->properties->billable,
+                'billable' => (bool) config('app.enable_billable', true)
+                    ? $this->resource->properties->billable
+                    : null,
                 /** @var array<string>|null $client_ids Filter by client IDs, client IDs are OR combined */
                 'client_ids' => $this->resource->properties->clientIds?->toArray(),
                 /** @var array<string>|null $project_ids Filter by project IDs, project IDs are OR combined */

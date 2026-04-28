@@ -58,6 +58,14 @@ abstract class CsvExport
     abstract public function mapRow(Model $model): array;
 
     /**
+     * @return string[]
+     */
+    protected function header(): array
+    {
+        return static::HEADER;
+    }
+
+    /**
      * @throws \League\Csv\CannotInsertRecord
      * @throws \League\Csv\Exception
      * @throws \League\Csv\UnavailableStream
@@ -69,7 +77,7 @@ abstract class CsvExport
         $writer->setDelimiter(',');
         $writer->setEnclosure('"');
         $writer->setEscape('');
-        $writer->insertOne(static::HEADER);
+        $writer->insertOne($this->header());
 
         $this->builder->chunk($this->chunk, function (Collection $models) use ($writer): void {
             foreach ($models as $model) {
@@ -111,7 +119,7 @@ abstract class CsvExport
      */
     private function validateRow(array $row): void
     {
-        if (array_keys($row) !== static::HEADER) {
+        if (array_keys($row) !== $this->header()) {
             throw new \LogicException('Invalid row');
         }
     }

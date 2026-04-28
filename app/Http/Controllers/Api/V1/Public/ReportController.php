@@ -56,24 +56,32 @@ class ReportController extends Controller
         $filter->addStart($properties->start);
         $filter->addEnd($properties->end);
         $filter->addActive($properties->active);
-        $filter->addBillable($properties->billable);
+        if ((bool) config('app.enable_billable', true)) {
+            $filter->addBillable($properties->billable);
+        }
         $filter->addMemberIdsFilter($properties->memberIds?->toArray());
         $filter->addProjectIdsFilter($properties->projectIds?->toArray());
         $filter->addTagIdsFilter($properties->tagIds?->toArray());
         $filter->addTaskIdsFilter($properties->taskIds?->toArray());
         $filter->addClientIdsFilter($properties->clientIds?->toArray());
         $timeEntriesQuery = $filter->get();
+        $group = $report->properties->group;
+        $subGroup = $report->properties->subGroup;
+        if (! (bool) config('app.enable_billable', true)) {
+            $group = $group === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Project : $group;
+            $subGroup = $subGroup === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Task : $subGroup;
+        }
 
         $data = $timeEntryAggregationService->getAggregatedTimeEntriesWithDescriptions(
             $timeEntriesQuery->clone(),
-            $report->properties->group,
-            $report->properties->subGroup,
+            $group,
+            $subGroup,
             $report->properties->timezone,
             $report->properties->weekStart,
             false,
             $report->properties->start,
             $report->properties->end,
-            true,
+            (bool) config('app.enable_billable', true),
             $report->properties->roundingType,
             $report->properties->roundingMinutes,
         );
@@ -86,7 +94,7 @@ class ReportController extends Controller
             true,
             $report->properties->start,
             $report->properties->end,
-            true,
+            (bool) config('app.enable_billable', true),
             $report->properties->roundingType,
             $report->properties->roundingMinutes,
         );

@@ -46,6 +46,20 @@ class Member extends JetstreamMembership implements AuditableContract
      */
     protected $table = 'members';
 
+    protected static function booted(): void
+    {
+        static::saving(function (Member $member): void {
+            if (! (bool) config('app.enable_billable', true)) {
+                $member->billable_rate = null;
+            }
+        });
+    }
+
+    public function getBillableRateAttribute(mixed $value): ?int
+    {
+        return (bool) config('app.enable_billable', true) && $value !== null ? (int) $value : null;
+    }
+
     /**
      * @return BelongsTo<User, $this>
      */

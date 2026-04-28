@@ -24,6 +24,7 @@ class ProjectMemberResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('billable_rate')
                     ->label('Billable rate (in Cents)')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->nullable()
                     ->rules([
                         'nullable',
@@ -48,6 +49,7 @@ class ProjectMemberResource extends Resource
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID'),
                 Tables\Columns\TextColumn::make('billable_rate')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->numeric()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('project.name'),

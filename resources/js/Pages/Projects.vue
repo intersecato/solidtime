@@ -23,6 +23,7 @@ import ProjectStatusFilterBadge from '@/Components/Common/Project/ProjectStatusF
 import ProjectClientFilterBadge from '@/Components/Common/Project/ProjectClientFilterBadge.vue';
 import { NO_CLIENT_ID } from '@/Components/Common/Project/constants';
 import type { SortColumn, SortDirection } from '@/Components/Common/Project/ProjectTable.vue';
+import { isBillableEnabled } from '@/utils/features';
 
 // Fetch data using TanStack Query
 const { projects } = useProjectsQuery();
@@ -107,7 +108,8 @@ async function createClient(client: CreateClientBody): Promise<Client | undefine
 
 const showBillableRate = computed(() => {
     return !!(
-        getCurrentRole() !== 'employee' || organization.value?.employees_can_see_billable_rates
+        isBillableEnabled() &&
+        (getCurrentRole() !== 'employee' || organization.value?.employees_can_see_billable_rates)
     );
 });
 </script>

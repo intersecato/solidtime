@@ -12,6 +12,7 @@ import {
 import { useLocalStorage } from '@vueuse/core';
 import { useNotificationsStore } from '@/utils/notification';
 import { useQueryClient } from '@tanstack/vue-query';
+import { isBillableEnabled } from '@/utils/features';
 
 dayjs.extend(utc);
 
@@ -116,7 +117,7 @@ export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
                             description: currentTimeEntry.value?.description,
                             project_id: currentTimeEntry.value?.project_id,
                             task_id: currentTimeEntry.value?.task_id,
-                            billable: currentTimeEntry.value.billable,
+                            billable: isBillableEnabled() && currentTimeEntry.value.billable,
                             tags: currentTimeEntry.value?.tags,
                         },
                         { params: { organization: organization } }
@@ -174,7 +175,7 @@ export const useCurrentTimeEntryStore = defineStore('currentTimeEntry', () => {
                             project_id: currentTimeEntry.value.project_id,
                             task_id: currentTimeEntry.value.task_id,
                             start: currentTimeEntry.value.start,
-                            billable: currentTimeEntry.value.billable,
+                            billable: isBillableEnabled() && currentTimeEntry.value.billable,
                             end: currentTimeEntry.value.end,
                             tags: currentTimeEntry.value.tags,
                         },

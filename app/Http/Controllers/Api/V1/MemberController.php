@@ -36,6 +36,11 @@ use Illuminate\Support\Str;
 
 class MemberController extends Controller
 {
+    private function billableEnabled(): bool
+    {
+        return (bool) config('app.enable_billable', true);
+    }
+
     protected function checkPermission(Organization $organization, string $permission, ?Member $member = null): void
     {
         parent::checkPermission($organization, $permission);
@@ -81,10 +86,12 @@ class MemberController extends Controller
     {
         $this->checkPermission($organization, 'members:update', $member);
 
-        if ($request->has('billable_rate') && $member->billable_rate !== $request->getBillableRate()) {
+        if ($this->billableEnabled() && $request->has('billable_rate') && $member->billable_rate !== $request->getBillableRate()) {
             $member->billable_rate = $request->getBillableRate();
 
             $billableRateService->updateTimeEntriesBillableRateForMember($member);
+        } elseif (! $this->billableEnabled()) {
+            $member->billable_rate = null;
         }
         if ($request->has('role') && $member->role !== $request->getRole()->value) {
             $newRole = $request->getRole();

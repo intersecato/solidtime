@@ -8,9 +8,11 @@ import { PlusCircleIcon } from '@heroicons/vue/24/solid';
 import { getCurrentMembershipId, getCurrentOrganizationId } from '@/utils/useUser';
 import { api } from '@/packages/api/src';
 import { LoadingSpinner } from '@/packages/ui/src';
+import { isBillableEnabled } from '@/utils/features';
 
 // Get the organization ID using the utility function
 const organizationId = computed(() => getCurrentOrganizationId());
+const billableEnabled = isBillableEnabled();
 
 // Function to fetch latest tasks using the API client
 
@@ -58,7 +60,7 @@ const filteredLatestTasks = computed(() => {
                         t.project_id === item.project_id &&
                         t.tags.length === item.tags.length &&
                         t.tags.every((tag) => item.tags.includes(tag)) &&
-                        t.billable === item.billable
+                        (!billableEnabled || t.billable === item.billable)
                 )
             );
         })

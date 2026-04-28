@@ -20,9 +20,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from '@/packages/ui/src/Buttons';
 import TagDropdown from '@/packages/ui/src/Tag/TagDropdown.vue';
 import type { Tag, Task } from '@/packages/api/src';
+import { isBillableEnabled } from '@/utils/features';
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
+const billableEnabled = isBillableEnabled();
 
 const props = defineProps<{
     timeEntries: TimeEntry[];
@@ -97,7 +99,7 @@ async function submit() {
         }
     }
 
-    if (billable.value !== undefined) {
+    if (billableEnabled && billable.value !== undefined) {
         timeEntryUpdatesBody.billable = billable.value;
     }
     if (selectedTags.value.length > 0) {
@@ -195,7 +197,7 @@ watch(removeAllTags, () => {
                         </Field>
                     </div>
                 </Field>
-                <Field>
+                <Field v-if="billableEnabled">
                     <FieldLabel>Billable</FieldLabel>
                     <Select v-model="timeEntryBillable">
                         <SelectTrigger>

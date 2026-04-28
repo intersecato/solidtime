@@ -22,6 +22,7 @@ import ProjectEditBillableSection from '@/packages/ui/src/Project/ProjectEditBil
 import { isAllowedToPerformPremiumAction } from '@/utils/billing';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
+import { isBillableEnabled } from '@/utils/features';
 
 const { updateProject } = useProjectsStore();
 const { clients } = useClientsQuery();
@@ -29,6 +30,7 @@ const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
 const show = defineModel('show', { default: false });
 const saving = ref(false);
 const showBillableRateModal = ref(false);
+const billableEnabled = isBillableEnabled();
 const props = defineProps<{
     originalProject: Project;
 }>();
@@ -47,14 +49,18 @@ const project = ref<CreateProjectBody>({
 });
 
 async function submit() {
-    if (props.originalProject.billable_rate !== project.value.billable_rate) {
+    if (billableEnabled && props.originalProject.billable_rate !== project.value.billable_rate) {
         // make sure that the alert modal is not immediately submitted when user presses enter
         setTimeout(() => {
             showBillableRateModal.value = true;
         }, 0);
         return;
     }
-    await updateProject(props.originalProject.id, project.value);
+    await updateProject(props.originalProject.id, {
+        ...project.value,
+        billable_rate: billableEnabled ? project.value.billable_rate : null,
+        is_billable: billableEnabled && project.value.is_billable,
+    });
     show.value = false;
 }
 
@@ -70,7 +76,11 @@ const currentClientName = computed(() => {
 });
 
 async function submitBillableRate() {
-    await updateProject(props.originalProject.id, project.value);
+    await updateProject(props.originalProject.id, {
+        ...project.value,
+        billable_rate: billableEnabled ? project.value.billable_rate : null,
+        is_billable: billableEnabled && project.value.is_billable,
+    });
     show.value = false;
     showBillableRateModal.value = false;
 }
@@ -117,6 +127,7 @@ async function submitBillableRate() {
                     </ClientDropdown>
                 </Field>
                 <ProjectEditBillableSection
+                    v-if="billableEnabled"
                     v-model:is-billable="project.is_billable"
                     v-model:billable-rate="project.billable_rate"
                     :currency="getOrganizationCurrencyString()"
@@ -141,6 +152,7 @@ async function submitBillableRate() {
         </template>
     </DialogModal>
     <ProjectBillableRateModal
+        v-if="billableEnabled"
         v-model:show="showBillableRateModal"
         :currency="getOrganizationCurrencyString()"
         :new-billable-rate="project.billable_rate"

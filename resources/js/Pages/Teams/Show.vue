@@ -11,6 +11,7 @@ import OrganizationTimeEntrySettings from '@/Pages/Teams/Partials/OrganizationTi
 import { onMounted, ref } from 'vue';
 import { useOrganizationStore } from '@/utils/useOrganization';
 import { storeToRefs } from 'pinia';
+import { isBillableEnabled } from '@/utils/features';
 
 defineProps<{
     team: Organization;
@@ -21,6 +22,7 @@ defineProps<{
 const loading = ref(true);
 const orgStore = useOrganizationStore();
 const { organization } = storeToRefs(orgStore);
+const billableEnabled = isBillableEnabled();
 
 onMounted(async () => {
     await orgStore.fetchOrganization();
@@ -45,8 +47,9 @@ onMounted(async () => {
                     <UpdateTeamNameForm :team="team" :permissions="permissions" />
 
                     <SectionBorder />
-                    <OrganizationBillableRate v-if="permissions.canUpdateTeam" :team="team" />
-                    <SectionBorder />
+                    <template v-if="billableEnabled">
+                        <OrganizationBillableRate v-if="permissions.canUpdateTeam" :team="team" />
+                    </template>
 
                     <OrganizationFormatSettings v-if="permissions.canUpdateTeam" :team="team" />
                     <SectionBorder />

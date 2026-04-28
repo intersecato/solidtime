@@ -40,6 +40,7 @@ class ProjectResource extends Resource
                     ->required(),
                 Forms\Components\TextInput::make('billable_rate')
                     ->label('Billable rate (in Cents)')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->nullable()
                     ->rules([
                         'nullable',

@@ -29,6 +29,7 @@ import {
     ContextMenuTrigger,
 } from '@/packages/ui/src';
 import { PlayIcon, PencilIcon, DocumentDuplicateIcon, TrashIcon } from '@heroicons/vue/20/solid';
+import { isBillableEnabled } from '@/utils/features';
 
 const props = defineProps<{
     timeEntry: TimeEntry;
@@ -58,6 +59,7 @@ const props = defineProps<{
 const emit = defineEmits<{ selected: []; unselected: [] }>();
 
 const showEditModal = ref(false);
+const billableEnabled = isBillableEnabled();
 
 function updateTimeEntryDescription(description: string) {
     props.updateTimeEntry({ ...props.timeEntry, description });
@@ -68,7 +70,7 @@ function updateTimeEntryTags(tags: string[]) {
 }
 
 function updateTimeEntryBillable(billable: boolean) {
-    props.updateTimeEntry({ ...props.timeEntry, billable });
+    props.updateTimeEntry({ ...props.timeEntry, billable: billableEnabled && billable });
 }
 
 function updateStartEndTime(start: string, end: string | null) {
@@ -81,7 +83,7 @@ function updateProjectAndTask(projectId: string, taskId: string) {
         ...props.timeEntry,
         project_id: projectId,
         task_id: taskId,
-        billable: project ? project.is_billable : props.timeEntry.billable,
+        billable: billableEnabled && (project ? project.is_billable : props.timeEntry.billable),
     });
 }
 
@@ -159,6 +161,7 @@ async function handleDeleteTimeEntry() {
                                 :model-value="timeEntry.tags"
                                 @changed="updateTimeEntryTags"></TimeEntryRowTagDropdown>
                             <BillableToggleButton
+                                v-if="billableEnabled"
                                 :model-value="timeEntry.billable"
                                 size="small"
                                 faded
@@ -227,6 +230,7 @@ async function handleDeleteTimeEntry() {
                                         compact
                                         @changed="updateTimeEntryTags"></TimeEntryRowTagDropdown>
                                     <BillableToggleButton
+                                        v-if="billableEnabled"
                                         :model-value="timeEntry.billable"
                                         size="small"
                                         @changed="updateTimeEntryBillable"></BillableToggleButton>

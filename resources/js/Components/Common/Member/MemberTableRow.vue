@@ -34,12 +34,14 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from '@/packages/ui/src';
+import { isBillableEnabled } from '@/utils/features';
 
 const props = defineProps<{
     member: Member;
 }>();
 
 const organization = inject<ComputedRef<Organization>>('organization');
+const billableEnabled = isBillableEnabled();
 
 const showEditMemberModal = ref(false);
 const showMergeMemberModal = ref(false);
@@ -83,7 +85,9 @@ const userHasValidMailAddress = computed(() => {
                         {{ member.name }}
                     </span>
                 </div>
-                <div class="whitespace-nowrap px-3 py-4 text-sm text-text-primary">
+                <div
+                    v-if="billableEnabled"
+                    class="whitespace-nowrap px-3 py-4 text-sm text-text-primary">
                     {{ member.email }}
                 </div>
                 <div class="whitespace-nowrap px-3 py-4 text-sm text-text-primary">

@@ -24,6 +24,11 @@ use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
+    private function billableEnabled(): bool
+    {
+        return (bool) config('app.enable_billable', true);
+    }
+
     protected function checkPermission(Organization $organization, string $permission, ?Project $project = null): void
     {
         parent::checkPermission($organization, $permission);
@@ -64,7 +69,8 @@ class ProjectController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(config('app.pagination_per_page_default'));
 
-        $showBillableRate = $this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates;
+        $showBillableRate = $this->billableEnabled()
+            && ($this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates);
 
         return new ProjectCollection($projects, $showBillableRate);
     }
@@ -85,7 +91,7 @@ class ProjectController extends Controller
 
         $project->load('organization');
 
-        return new ProjectResource($project, true);
+        return new ProjectResource($project, $this->billableEnabled());
     }
 
     /**
@@ -101,8 +107,8 @@ class ProjectController extends Controller
         $project = new Project;
         $project->name = $request->input('name');
         $project->color = $request->input('color');
-        $project->is_billable = (bool) $request->input('is_billable');
-        $project->billable_rate = $request->getBillableRate();
+        $project->is_billable = $this->billableEnabled() && (bool) $request->input('is_billable');
+        $project->billable_rate = $this->billableEnabled() ? $request->getBillableRate() : null;
         $project->client_id = $request->input('client_id');
         $project->is_public = $request->getIsPublic();
         if ($this->canAccessPremiumFeatures($organization) && $request->has('estimated_time')) {
@@ -111,7 +117,7 @@ class ProjectController extends Controller
         $project->organization()->associate($organization);
         $project->save();
 
-        return new ProjectResource($project, true);
+        return new ProjectResource($project, $this->billableEnabled());
     }
 
     /**
@@ -126,7 +132,7 @@ class ProjectController extends Controller
         $this->checkPermission($organization, 'projects:update', $project);
         $project->name = $request->input('name');
         $project->color = $request->input('color');
-        $project->is_billable = (bool) $request->input('is_billable');
+        $project->is_billable = $this->billableEnabled() && (bool) $request->input('is_billable');
         if ($request->has('is_archived')) {
             $project->archived_at = $request->getIsArchived() ? Carbon::now() : null;
         }
@@ -138,14 +144,15 @@ class ProjectController extends Controller
         }
         $oldBillableRate = $project->billable_rate;
         $clientIdChanged = false;
-        $project->billable_rate = $request->getBillableRate();
+        $newBillableRate = $this->billableEnabled() ? $request->getBillableRate() : null;
+        $project->billable_rate = $newBillableRate;
         if ($project->client_id !== $request->input('client_id')) {
             $project->client_id = $request->input('client_id');
             $clientIdChanged = true;
         }
         $project->save();
 
-        if ($oldBillableRate !== $request->getBillableRate()) {
+        if ($this->billableEnabled() && $oldBillableRate !== $newBillableRate) {
             $billableRateService->updateTimeEntriesBillableRateForProject($project);
         }
         if ($clientIdChanged) {
@@ -155,7 +162,7 @@ class ProjectController extends Controller
                 ->update(['client_id' => $project->client_id]);
         }
 
-        return new ProjectResource($project, true);
+        return new ProjectResource($project, $this->billableEnabled());
     }
 
     /**

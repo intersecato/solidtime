@@ -94,6 +94,16 @@ class Project extends Model implements AuditableContract
         'spent_time',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Project $project): void {
+            if (! (bool) config('app.enable_billable', true)) {
+                $project->is_billable = false;
+                $project->billable_rate = null;
+            }
+        });
+    }
+
     public function getSpentTimeComputed(): ?int
     {
         if ($this->hasAttribute('spent_time_computed')) {
@@ -107,6 +117,16 @@ class Project extends Model implements AuditableContract
 
             return (int) $result->spent_time;
         }
+    }
+
+    public function getIsBillableAttribute(mixed $value): bool
+    {
+        return (bool) config('app.enable_billable', true) && (bool) $value;
+    }
+
+    public function getBillableRateAttribute(mixed $value): ?int
+    {
+        return (bool) config('app.enable_billable', true) && $value !== null ? (int) $value : null;
     }
 
     /**

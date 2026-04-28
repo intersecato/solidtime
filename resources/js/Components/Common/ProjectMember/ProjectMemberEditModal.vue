@@ -11,10 +11,12 @@ import { UserIcon } from '@heroicons/vue/24/solid';
 import ProjectMemberBillableRateModal from '@/Components/Common/ProjectMember/ProjectMemberBillableRateModal.vue';
 import { Field, FieldLabel } from '@/packages/ui/src/field';
 import { getOrganizationCurrencyString } from '@/utils/money';
+import { isBillableEnabled } from '@/utils/features';
 const { updateProjectMember } = useProjectMembersStore();
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
+const billableEnabled = isBillableEnabled();
 
 const props = defineProps<{
     projectMember: ProjectMember;
@@ -26,14 +28,17 @@ const projectMemberBody = ref<UpdateProjectMemberBody>({
 });
 const showBillableRateModal = ref(false);
 async function submit() {
-    if (props.projectMember.billable_rate !== projectMemberBody.value.billable_rate) {
+    if (billableEnabled && props.projectMember.billable_rate !== projectMemberBody.value.billable_rate) {
         // make sure that the alert modal is not immediately submitted when user presses enter
         setTimeout(() => {
             showBillableRateModal.value = true;
         }, 0);
         return;
     }
-    await updateProjectMember(props.projectMember.id, projectMemberBody.value);
+    await updateProjectMember(props.projectMember.id, {
+        ...projectMemberBody.value,
+        billable_rate: billableEnabled ? projectMemberBody.value.billable_rate : null,
+    });
     show.value = false;
     projectMemberBody.value = {
         billable_rate: null,
@@ -41,7 +46,10 @@ async function submit() {
 }
 
 async function submitBillableRate() {
-    await updateProjectMember(props.projectMember.id, projectMemberBody.value);
+    await updateProjectMember(props.projectMember.id, {
+        ...projectMemberBody.value,
+        billable_rate: billableEnabled ? projectMemberBody.value.billable_rate : null,
+    });
     show.value = false;
     showBillableRateModal.value = false;
 }
@@ -72,6 +80,7 @@ useFocus(projectNameInput, { initialValue: true });
 
         <template #content>
             <ProjectMemberBillableRateModal
+                v-if="billableEnabled"
                 v-model:show="showBillableRateModal"
                 :member-name="props.name"
                 :new-billable-rate="projectMemberBody.billable_rate"
@@ -82,7 +91,7 @@ useFocus(projectNameInput, { initialValue: true });
                     <UserIcon class="w-4 text-text-secondary"></UserIcon>
                     <span>{{ props.name }}</span>
                 </div>
-                <Field class="col-span-3 sm:col-span-1 flex-1">
+                <Field v-if="billableEnabled" class="col-span-3 sm:col-span-1 flex-1">
                     <FieldLabel for="billable_rate">Billable Rate</FieldLabel>
                     <BillableRateInput
                         v-model="projectMemberBody.billable_rate"

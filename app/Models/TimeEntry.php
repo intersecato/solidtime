@@ -117,9 +117,33 @@ class TimeEntry extends Model implements AuditableContract
         'billable_rate',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (TimeEntry $timeEntry): void {
+            if (! (bool) config('app.enable_billable', true)) {
+                $timeEntry->billable = false;
+                $timeEntry->billable_rate = null;
+            }
+        });
+    }
+
     public function getBillableRateComputed(): ?int
     {
+        if (! (bool) config('app.enable_billable', true)) {
+            return null;
+        }
+
         return app(BillableRateService::class)->getBillableRateForTimeEntry($this);
+    }
+
+    public function getBillableAttribute(mixed $value): bool
+    {
+        return (bool) config('app.enable_billable', true) && (bool) $value;
+    }
+
+    public function getBillableRateAttribute(mixed $value): ?int
+    {
+        return (bool) config('app.enable_billable', true) && $value !== null ? (int) $value : null;
     }
 
     public function getClientIdComputed(): ?string

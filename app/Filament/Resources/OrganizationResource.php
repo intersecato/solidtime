@@ -91,6 +91,7 @@ class OrganizationResource extends Resource
                     ->searchable(),
                 Forms\Components\TextInput::make('billable_rate')
                     ->label('Billable rate (in Cents)')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->nullable()
                     ->rules([
                         'nullable',
@@ -125,6 +126,7 @@ class OrganizationResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('currency'),
                 TextColumn::make('billable_rate')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->money(fn (Organization $resource) => $resource->currency, divideBy: 100),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

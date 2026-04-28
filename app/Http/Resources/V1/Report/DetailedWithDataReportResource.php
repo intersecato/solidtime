@@ -8,6 +8,7 @@ use App\Enums\CurrencyFormat;
 use App\Enums\DateFormat;
 use App\Enums\IntervalFormat;
 use App\Enums\NumberFormat;
+use App\Enums\TimeEntryAggregationType;
 use App\Enums\TimeFormat;
 use App\Http\Resources\V1\BaseResource;
 use App\Models\Report;
@@ -71,6 +72,12 @@ class DetailedWithDataReportResource extends BaseResource
     public function toArray(Request $request): array
     {
         $currencyService = app(CurrencyService::class);
+        $group = $this->resource->properties->group;
+        $subGroup = $this->resource->properties->subGroup;
+        if (! (bool) config('app.enable_billable', true)) {
+            $group = $group === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Project : $group;
+            $subGroup = $subGroup === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Task : $subGroup;
+        }
 
         return [
             /** @var string $name Name */
@@ -95,9 +102,9 @@ class DetailedWithDataReportResource extends BaseResource
             'time_format' => $this->resource->organization->time_format->value,
             'properties' => [
                 /** @var string $group Type of first grouping */
-                'group' => $this->resource->properties->group->value,
+                'group' => $group->value,
                 /** @var string $sub_group Type of second grouping */
-                'sub_group' => $this->resource->properties->subGroup->value,
+                'sub_group' => $subGroup->value,
                 /** @var string $history_group Type of grouping of the historic aggregation (time chart) */
                 'history_group' => $this->resource->properties->historyGroup->value,
                 /** @var string $start Start date of the report */

@@ -24,6 +24,7 @@ import {
     BuildingOfficeIcon,
 } from '@heroicons/vue/20/solid';
 import BillableIcon from '@/packages/ui/src/Icons/BillableIcon.vue';
+import { isBillableEnabled } from '@/utils/features';
 import type { Organization } from '@/types/models';
 
 export type CommandGroup =
@@ -344,7 +345,7 @@ export function createActiveTimerCommands(
             keywords: ['billable', 'non-billable', 'money'],
             group: 'active-timer',
             action: activeTimerActions.toggleBillable,
-            condition: conditions.isActive,
+            condition: () => conditions.isActive() && isBillableEnabled(),
             priority: GROUP_PRIORITIES['active-timer'] + 7,
         },
         ...addMinutesCommands,

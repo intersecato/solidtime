@@ -15,6 +15,7 @@ import { fetchAllClients } from '@/utils/useClientsQuery';
 import { fetchAllMembers } from '@/utils/useMembersQuery';
 import { fetchAllReports } from '@/utils/useReportsQuery';
 import { fetchAllProjectMembers } from '@/utils/useProjectMembersQuery';
+import { isBillableEnabled } from '@/utils/features';
 
 /**
  * Route patterns mapped to their prefetch functions.
@@ -125,17 +126,21 @@ function prefetchDashboard(queryClient: QueryClient) {
         staleTime: 30000,
     });
 
-    queryClient.prefetchQuery({
-        queryKey: ['totalWeeklyBillableTime', organizationId],
-        queryFn: () => api.totalWeeklyBillableTime({ params: { organization: organizationId } }),
-        staleTime: 30000,
-    });
+    if (isBillableEnabled()) {
+        queryClient.prefetchQuery({
+            queryKey: ['totalWeeklyBillableTime', organizationId],
+            queryFn: () =>
+                api.totalWeeklyBillableTime({ params: { organization: organizationId } }),
+            staleTime: 30000,
+        });
 
-    queryClient.prefetchQuery({
-        queryKey: ['totalWeeklyBillableAmount', organizationId],
-        queryFn: () => api.totalWeeklyBillableAmount({ params: { organization: organizationId } }),
-        staleTime: 30000,
-    });
+        queryClient.prefetchQuery({
+            queryKey: ['totalWeeklyBillableAmount', organizationId],
+            queryFn: () =>
+                api.totalWeeklyBillableAmount({ params: { organization: organizationId } }),
+            staleTime: 30000,
+        });
+    }
 
     queryClient.prefetchQuery({
         queryKey: ['weeklyHistory', organizationId],

@@ -14,6 +14,7 @@ import DateRangePicker from '@/packages/ui/src/Input/DateRangePicker.vue';
 import TagDropdown from '@/packages/ui/src/Tag/TagDropdown.vue';
 import { useTagsQuery } from '@/utils/useTagsQuery';
 import { useTagsStore } from '@/utils/useTags';
+import { isBillableEnabled } from '@/utils/features';
 
 type TimeEntryRoundingType = 'up' | 'down' | 'nearest';
 
@@ -34,6 +35,7 @@ const emit = defineEmits<{
 }>();
 
 const { tags } = useTagsQuery();
+const billableEnabled = isBillableEnabled();
 
 async function createTag(name: string) {
     return await useTagsStore().createTag(name);
@@ -95,7 +97,10 @@ async function createTag(name: string) {
                     </template>
                 </TagDropdown>
 
-                <Select v-model="billable" @update:model-value="emit('submit')">
+                <Select
+                    v-if="billableEnabled"
+                    v-model="billable"
+                    @update:model-value="emit('submit')">
                     <SelectTrigger
                         size="sm"
                         variant="outline"

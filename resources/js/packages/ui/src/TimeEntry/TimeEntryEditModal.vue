@@ -25,10 +25,12 @@ import DurationHumanInput from '@/packages/ui/src/Input/DurationHumanInput.vue';
 import { InformationCircleIcon } from '@heroicons/vue/20/solid';
 import type { Tag, Task } from '@/packages/api/src';
 import TimePickerSimple from '@/packages/ui/src/Input/TimePickerSimple.vue';
+import { isBillableEnabled } from '@/utils/features';
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
 const deleting = ref(false);
+const billableEnabled = isBillableEnabled();
 
 const props = defineProps<{
     timeEntry: TimeEntry | null;
@@ -63,7 +65,10 @@ watch(
     () => props.timeEntry,
     (newTimeEntry) => {
         if (newTimeEntry) {
-            editableTimeEntry.value = { ...newTimeEntry };
+            editableTimeEntry.value = {
+                ...newTimeEntry,
+                billable: billableEnabled && newTimeEntry.billable,
+            };
         }
     },
     { immediate: true }
@@ -73,6 +78,11 @@ watch(
     () => editableTimeEntry.value?.project_id,
     (value, oldValue) => {
         if (oldValue !== undefined && value !== oldValue && editableTimeEntry.value) {
+            if (!billableEnabled) {
+                editableTimeEntry.value.billable = false;
+                return;
+            }
+
             const project = props.projects.find((p) => p.id === value);
             if (project) {
                 editableTimeEntry.value.billable = project.is_billable;
@@ -108,6 +118,9 @@ async function submit() {
     if (editableTimeEntry.value) {
         saving.value = true;
         try {
+            if (!billableEnabled) {
+                editableTimeEntry.value.billable = false;
+            }
             await props.updateTimeEntry(editableTimeEntry.value);
             show.value = false;
         } finally {
@@ -195,7 +208,7 @@ const billableProxy = computed({
                                 </Button>
                             </template>
                         </TagDropdown>
-                        <Select v-model="billableProxy">
+                        <Select v-if="billableEnabled" v-model="billableProxy">
                             <SelectTrigger :show-chevron="false">
                                 <SelectValue class="flex items-center gap-2">
                                     <BillableIcon class="h-4 text-icon-default" />

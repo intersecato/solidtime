@@ -25,6 +25,7 @@ import DurationHumanInput from '@/packages/ui/src/Input/DurationHumanInput.vue';
 import { InformationCircleIcon } from '@heroicons/vue/20/solid';
 import type { Tag, Task } from '@/packages/api/src';
 import TimePickerSimple from '@/packages/ui/src/Input/TimePickerSimple.vue';
+import { isBillableEnabled } from '@/utils/features';
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
@@ -47,6 +48,7 @@ const props = defineProps<{
 }>();
 
 const description = ref<HTMLInputElement | null>(null);
+const billableEnabled = isBillableEnabled();
 
 watch(show, (value) => {
     if (value) {
@@ -91,6 +93,11 @@ watch(
 watch(
     () => timeEntry.value.project_id,
     (value) => {
+        if (!billableEnabled) {
+            timeEntry.value.billable = false;
+            return;
+        }
+
         if (value) {
             // check if project is billable by default and set billable accordingly
             const project = props.projects.find((p) => p.id === value);
@@ -117,7 +124,10 @@ watch(localEnd, (value) => {
 });
 
 async function submit() {
-    await props.createTimeEntry({ ...timeEntry.value });
+    await props.createTimeEntry({
+        ...timeEntry.value,
+        billable: billableEnabled && timeEntry.value.billable,
+    });
     timeEntry.value = { ...timeEntryDefaultValues };
     localStart.value = getLocalizedDayJs(timeEntryDefaultValues.start).format();
     localEnd.value = getLocalizedDayJs(timeEntryDefaultValues.end).format();
@@ -188,7 +198,7 @@ const billableProxy = computed({
                             </Button>
                         </template>
                     </TagDropdown>
-                    <Select v-model="billableProxy">
+                    <Select v-if="billableEnabled" v-model="billableProxy">
                         <SelectTrigger :show-chevron="false">
                             <SelectValue class="flex items-center gap-2">
                                 <BillableIcon class="h-4 text-icon-default" />

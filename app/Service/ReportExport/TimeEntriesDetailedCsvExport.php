@@ -32,11 +32,26 @@ class TimeEntriesDetailedCsvExport extends CsvExport
 
     private string $timezone;
 
-    public function __construct(string $disk, string $folderPath, string $filename, Builder $builder, int $chunk, string $timezone)
+    private bool $showBillableRate;
+
+    public function __construct(string $disk, string $folderPath, string $filename, Builder $builder, int $chunk, string $timezone, bool $showBillableRate)
     {
         parent::__construct($disk, $folderPath, $filename, $builder, $chunk);
 
         $this->timezone = $timezone;
+        $this->showBillableRate = $showBillableRate;
+    }
+
+    protected function header(): array
+    {
+        if ($this->showBillableRate) {
+            return self::HEADER;
+        }
+
+        return array_values(array_filter(
+            self::HEADER,
+            fn (string $header): bool => $header !== 'Billable'
+        ));
     }
 
     /**
@@ -47,7 +62,7 @@ class TimeEntriesDetailedCsvExport extends CsvExport
         $interval = app(IntervalService::class);
         $duration = $model->getDuration();
 
-        return [
+        $row = [
             'Description' => $model->description,
             'Task' => $model->task?->name,
             'Project' => $model->project?->name,
@@ -57,8 +72,15 @@ class TimeEntriesDetailedCsvExport extends CsvExport
             'End' => $model->end->timezone($this->timezone),
             'Duration' => $duration !== null ? $interval->format($model->getDuration()) : null,
             'Duration (decimal)' => $duration?->totalHours,
-            'Billable' => $model->billable ? 'Yes' : 'No',
             'Tags' => $model->tagsRelation->pluck('name')->implode(', '),
         ];
+
+        if ($this->showBillableRate) {
+            $row = array_slice($row, 0, 9, true)
+                + ['Billable' => $model->billable ? 'Yes' : 'No']
+                + array_slice($row, 9, null, true);
+        }
+
+        return $row;
     }
 }

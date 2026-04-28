@@ -16,9 +16,11 @@ import EstimatedTimeSection from '@/packages/ui/src/EstimatedTimeSection.vue';
 import { Field, FieldGroup, FieldLabel } from '../field';
 import ProjectEditBillableSection from '@/packages/ui/src/Project/ProjectEditBillableSection.vue';
 import type { Client } from '@/packages/api/src';
+import { isBillableEnabled } from '@/utils/features';
 
 const show = defineModel('show', { default: false });
 const saving = ref(false);
+const billableEnabled = isBillableEnabled();
 
 const props = defineProps<{
     clients: Client[];
@@ -44,7 +46,11 @@ const project = ref<CreateProjectBody>({
 });
 
 async function submit() {
-    await props.createProject(project.value);
+    await props.createProject({
+        ...project.value,
+        billable_rate: billableEnabled ? project.value.billable_rate : null,
+        is_billable: billableEnabled && project.value.is_billable,
+    });
     show.value = false;
     project.value = {
         name: '',
@@ -113,6 +119,7 @@ const currentClientName = computed(() => {
                     </ClientDropdown>
                 </Field>
                 <ProjectEditBillableSection
+                    v-if="billableEnabled"
                     v-model:is-billable="project.is_billable"
                     v-model:billable-rate="project.billable_rate"
                     :currency="currency"

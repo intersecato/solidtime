@@ -24,6 +24,7 @@ import { getOrganizationCurrencyString } from '@/utils/money';
 import { useQuery } from '@tanstack/vue-query';
 import { getCurrentOrganizationId } from '@/utils/useUser';
 import { api, type Organization } from '@/packages/api/src';
+import { isBillableEnabled } from '@/utils/features';
 
 use([CanvasRenderer, BarChart, TitleComponent, GridComponent, TooltipComponent, LegendComponent]);
 
@@ -60,6 +61,7 @@ const accentColor = useCssVariable('--theme-color-chart');
 const organizationId = computed(() => getCurrentOrganizationId());
 
 const organization = inject<ComputedRef<Organization>>('organization');
+const billableEnabled = isBillableEnabled();
 
 // Set up the queries
 const { data: weeklyProjectOverview } = useQuery({
@@ -71,7 +73,7 @@ const { data: weeklyProjectOverview } = useQuery({
             },
         });
     },
-    enabled: computed(() => !!organizationId.value),
+    enabled: computed(() => billableEnabled && !!organizationId.value),
     staleTime: 1000 * 30, // 30 seconds
 });
 
@@ -84,7 +86,7 @@ const { data: totalWeeklyTime } = useQuery({
             },
         });
     },
-    enabled: computed(() => !!organizationId.value),
+    enabled: computed(() => billableEnabled && !!organizationId.value),
     staleTime: 1000 * 30, // 30 seconds
 });
 
@@ -260,6 +262,7 @@ const option = computed(() => {
                         : '--'
                 " />
             <StatCard
+                v-if="billableEnabled"
                 title="Billable Time"
                 :value="
                     totalWeeklyBillableTime
@@ -271,6 +274,7 @@ const option = computed(() => {
                         : '--'
                 " />
             <StatCard
+                v-if="billableEnabled"
                 title="Billable Amount"
                 :value="
                     totalWeeklyBillableAmount

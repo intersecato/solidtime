@@ -29,6 +29,7 @@ import { formatCents } from '../packages/ui/src/utils/money';
 import { getOrganizationCurrencyString } from '../utils/money';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
+import { isBillableEnabled } from '@/utils/features';
 
 const { projects } = useProjectsQuery();
 
@@ -40,6 +41,7 @@ const project = computed(() => {
 const createTask = ref(false);
 const createProjectMember = ref(false);
 const projectId = route()?.params?.project as string;
+const billableEnabled = isBillableEnabled();
 
 // TanStack Query automatically fetches project members when component mounts
 const { projectMembers } = canViewProjectMembers()
@@ -109,7 +111,7 @@ const shownTasks = computed(() => {
                         </div>
                     </li>
                 </ol>
-                <div class="px-4">
+                <div v-if="billableEnabled" class="px-4">
                     <Badge v-if="project?.billable_rate">
                         {{ billableRateFormatted }}
                         / h

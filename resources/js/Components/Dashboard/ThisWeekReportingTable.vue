@@ -19,8 +19,10 @@ import {
 import { useQuery } from '@tanstack/vue-query';
 import { useStorage } from '@vueuse/core';
 import { computed, inject, type ComputedRef, watch } from 'vue';
+import { isBillableEnabled } from '@/utils/features';
 
 const organization = inject<ComputedRef<Organization>>('organization');
+const billableEnabled = isBillableEnabled();
 
 const group = useStorage<GroupingOption>('dashboard-reporting-group', 'project');
 const subGroup = useStorage<GroupingOption>('dashboard-reporting-sub-group', 'task');
@@ -31,6 +33,12 @@ const { groupByOptions, getNameForReportingRowEntry } = reportingStore;
 watch(
     group,
     () => {
+        if (!groupByOptions.some((option) => option.value === group.value)) {
+            group.value = groupByOptions[0]?.value ?? 'project';
+        }
+        if (!groupByOptions.some((option) => option.value === subGroup.value)) {
+            subGroup.value = groupByOptions.find((option) => option.value !== group.value)?.value ?? 'task';
+        }
         if (group.value === subGroup.value) {
             const fallbackOption = groupByOptions.find((el) => el.value !== group.value);
             if (fallbackOption?.value) {
@@ -117,9 +125,14 @@ const tableData = computed(() => {
 
 const showBillableRate = computed(() => {
     return !!(
-        getCurrentRole() !== 'employee' || organization?.value?.employees_can_see_billable_rates
+        billableEnabled &&
+        (getCurrentRole() !== 'employee' || organization?.value?.employees_can_see_billable_rates)
     );
 });
+
+const tableGridStyle = computed(
+    () => `grid-template-columns: 1fr 100px${showBillableRate.value ? ' 150px' : ''}`
+);
 </script>
 
 <template>
@@ -140,7 +153,7 @@ const showBillableRate = computed(() => {
 
         <div
             class="grid items-center"
-            :style="`grid-template-columns: 1fr 100px ${showBillableRate ? '150px' : ''}`">
+            :style="tableGridStyle">
             <div
                 class="contents [&>*]:border-card-background-separator [&>*]:border-b [&>*]:pb-1.5 [&>*]:pt-1 text-text-tertiary text-sm">
                 <div class="pl-6">Name</div>

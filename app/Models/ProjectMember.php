@@ -47,6 +47,20 @@ class ProjectMember extends Model implements AuditableContract
         'billable_rate' => 'int',
     ];
 
+    protected static function booted(): void
+    {
+        static::saving(function (ProjectMember $projectMember): void {
+            if (! (bool) config('app.enable_billable', true)) {
+                $projectMember->billable_rate = null;
+            }
+        });
+    }
+
+    public function getBillableRateAttribute(mixed $value): ?int
+    {
+        return (bool) config('app.enable_billable', true) && $value !== null ? (int) $value : null;
+    }
+
     /**
      * @return BelongsTo<Project, $this>
      */

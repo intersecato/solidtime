@@ -2,6 +2,7 @@ import { ref, type Ref, type ComputedRef } from 'vue';
 import type { Dayjs } from 'dayjs';
 import type { TimeEntry } from '@/packages/api/src';
 import { getDayJsInstance, getLocalizedDayJsFromMinutes } from '../utils/time';
+import { isBillableEnabled } from '@/utils/features';
 
 import type { CalendarSettings } from './calendarSettings';
 import type { CalendarEvent } from './calendarTypes';
@@ -23,6 +24,7 @@ export function useContextMenu(params: {
 }) {
     const contextMenuTimeEntry = ref<TimeEntry | null>(null);
     const contextMenuCreateTime = ref<{ start: Dayjs; end: Dayjs } | null>(null);
+    const billableEnabled = isBillableEnabled();
 
     function getTimeAtClickPosition(event: MouseEvent): { start: Dayjs; end: Dayjs } | null {
         const date = params.getDayFromClientX(event.clientX);
@@ -72,7 +74,7 @@ export function useContextMenu(params: {
         await params.createTimeEntry({
             start: entry.start,
             end: entry.end,
-            billable: entry.billable,
+            billable: billableEnabled && entry.billable,
             description: entry.description,
             project_id: entry.project_id,
             task_id: entry.task_id,
@@ -107,7 +109,7 @@ export function useContextMenu(params: {
             await params.createTimeEntry({
                 start: midpoint.utc().format(),
                 end: entry.end,
-                billable: entry.billable,
+                billable: billableEnabled && entry.billable,
                 description: entry.description,
                 project_id: entry.project_id,
                 task_id: entry.task_id,

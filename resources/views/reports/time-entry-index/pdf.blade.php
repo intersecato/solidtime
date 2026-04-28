@@ -157,7 +157,9 @@
                 <th>User</th>
                 <th style="text-align: center;">Time</th>
                 <th>Duration</th>
+                @if($showBillableRate)
                 <th>Billable</th>
+                @endif
                 <th>Tags</th>
             </tr>
             </thead>
@@ -191,7 +193,9 @@
                     <td style="overflow-wrap: break-word; min-width: 75px;">
                         {{ $localization->formatIntervalForReporting($timeEntry->getDuration()) }}
                     </td>
+                    @if($showBillableRate)
                     <td style="overflow-wrap: break-word;">{{ $timeEntry->billable ? 'Yes' : 'No' }}</td>
+                    @endif
                     <td style="overflow-wrap: break-word; min-width: 75px;">{{ count($timeEntry->tagsRelation) === 0 ? '-' : $timeEntry->tagsRelation->implode('name', ', ') }}</td>
                 </tr>
             @endforeach

@@ -21,11 +21,13 @@ import { getOrganizationCurrencyString } from '@/utils/money';
 import BillableIcon from '@/packages/ui/src/Icons/BillableIcon.vue';
 import { useOrganizationQuery } from '@/utils/useOrganizationQuery';
 import { getCurrentOrganizationId } from '@/utils/useUser';
+import { isBillableEnabled } from '@/utils/features';
 
 const { updateMember } = useMembersStore();
 const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
 const show = defineModel('show', { default: false });
 const saving = ref(false);
+const billableEnabled = isBillableEnabled();
 
 const props = defineProps<{
     member: Member;
@@ -47,7 +49,10 @@ async function submitBillableRate() {
 }
 
 async function submit() {
-    await updateMember(props.member.id, memberBody.value);
+    await updateMember(props.member.id, {
+        ...memberBody.value,
+        billable_rate: billableEnabled ? memberBody.value.billable_rate : null,
+    });
     show.value = false;
     showBillableRateModal.value = false;
     showOwnershipTransferConfirmModal.value = false;
@@ -57,7 +62,7 @@ const showBillableRateModal = ref(false);
 const showOwnershipTransferConfirmModal = ref(false);
 
 function saveWithChecks() {
-    if (memberBody.value.billable_rate !== props.member.billable_rate) {
+    if (billableEnabled && memberBody.value.billable_rate !== props.member.billable_rate) {
         // make sure that the alert modal is not immediately submitted when user presses enter
         setTimeout(() => {
             showBillableRateModal.value = true;
@@ -127,6 +132,7 @@ const roleDescription = computed(() => {
 
 <template>
     <MemberBillableRateModal
+        v-if="billableEnabled"
         v-model:saving="saving"
         v-model:show="showBillableRateModal"
         :member-name="member.name"
@@ -154,7 +160,7 @@ const roleDescription = computed(() => {
                         }}</FieldDescription>
                     </Field>
                 </div>
-                <div class="pt-5">
+                <div v-if="billableEnabled" class="pt-5">
                     <Field>
                         <FieldLabel :icon="BillableIcon" for="billableRateType"
                             >Billable Rate</FieldLabel

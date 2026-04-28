@@ -13,6 +13,11 @@ use Illuminate\Auth\Access\AuthorizationException;
 
 class OrganizationController extends Controller
 {
+    private function billableEnabled(): bool
+    {
+        return (bool) config('app.enable_billable', true);
+    }
+
     /**
      * Get organization
      *
@@ -24,7 +29,8 @@ class OrganizationController extends Controller
     {
         $this->checkPermission($organization, 'organizations:view');
 
-        $showBillableRate = $this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates;
+        $showBillableRate = $this->billableEnabled()
+            && ($this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates);
 
         return new OrganizationResource($organization, $showBillableRate);
     }
@@ -43,7 +49,7 @@ class OrganizationController extends Controller
         if ($request->getName() !== null) {
             $organization->name = $request->getName();
         }
-        if ($request->getEmployeesCanSeeBillableRates() !== null) {
+        if ($this->billableEnabled() && $request->getEmployeesCanSeeBillableRates() !== null) {
             $organization->employees_can_see_billable_rates = $request->getEmployeesCanSeeBillableRates();
         }
         if ($request->getEmployeesCanManageTasks() !== null) {
@@ -67,10 +73,13 @@ class OrganizationController extends Controller
         if ($request->getPreventOverlappingTimeEntries() !== null) {
             $organization->prevent_overlapping_time_entries = $request->getPreventOverlappingTimeEntries();
         }
-        $hasBillableRate = $request->has('billable_rate');
+        $hasBillableRate = $this->billableEnabled() && $request->has('billable_rate');
         if ($hasBillableRate) {
             $oldBillableRate = $organization->billable_rate;
             $organization->billable_rate = $request->getBillableRate();
+        } elseif (! $this->billableEnabled()) {
+            $organization->billable_rate = null;
+            $organization->employees_can_see_billable_rates = false;
         }
         $organization->save();
 
@@ -78,6 +87,6 @@ class OrganizationController extends Controller
             $billableRateService->updateTimeEntriesBillableRateForOrganization($organization);
         }
 
-        return new OrganizationResource($organization, true);
+        return new OrganizationResource($organization, $this->billableEnabled());
     }
 }

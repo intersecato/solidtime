@@ -9,6 +9,7 @@ import { getDayJsInstance } from '@/packages/ui/src/utils/time';
 import type { TimeEntry } from '@/packages/api/src';
 import { useTasksQuery } from '@/utils/useTasksQuery';
 import { ChevronRightIcon } from '@heroicons/vue/16/solid';
+import { isBillableEnabled } from '@/utils/features';
 
 const props = defineProps<{
     timeEntry: TimeEntry;
@@ -28,6 +29,7 @@ const task = computed(() => {
 
 const { currentTimeEntry } = storeToRefs(useCurrentTimeEntryStore());
 const { setActiveState } = useCurrentTimeEntryStore();
+const billableEnabled = isBillableEnabled();
 
 async function startTaskTimer() {
     if (currentTimeEntry.value.id) {
@@ -37,7 +39,7 @@ async function startTaskTimer() {
     currentTimeEntry.value.project_id = props.timeEntry.project_id;
     currentTimeEntry.value.task_id = props.timeEntry.task_id;
     currentTimeEntry.value.tags = props.timeEntry.tags;
-    currentTimeEntry.value.billable = props.timeEntry.billable;
+    currentTimeEntry.value.billable = billableEnabled && props.timeEntry.billable;
     currentTimeEntry.value.start = getDayJsInstance().utc().format();
     await setActiveState(true);
     useCurrentTimeEntryStore().fetchCurrentTimeEntry();

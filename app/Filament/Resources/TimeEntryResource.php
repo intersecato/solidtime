@@ -43,6 +43,7 @@ class TimeEntryResource extends Resource
                     ->maxLength(255),
                 Toggle::make('billable')
                     ->label('Is Billable?')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->required(),
                 DateTimePicker::make('start')
                     ->label('Start')

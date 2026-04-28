@@ -2,6 +2,7 @@
 import TableHeading from '@/Components/Common/TableHeading.vue';
 import { ChevronUpIcon, ChevronDownIcon } from '@heroicons/vue/16/solid';
 import type { SortColumn, SortDirection } from '@/Components/Common/Member/MemberTable.vue';
+import { isBillableEnabled } from '@/utils/features';
 
 const props = defineProps<{
     sortColumn: SortColumn;
@@ -12,6 +13,8 @@ const props = defineProps<{
 const emit = defineEmits<{
     sort: [column: SortColumn];
 }>();
+
+const billableEnabled = isBillableEnabled();
 
 function handleSort(column: SortColumn) {
     emit('sort', column);
@@ -45,6 +48,7 @@ function isChevronUp(column: SortColumn): boolean {
             <span v-else class="w-4 h-4"></span>
         </div>
         <div
+            v-if="billableEnabled"
             class="px-3 py-1.5 text-left text-text-tertiary cursor-pointer hover:bg-secondary hover:text-text-primary transition-colors select-none flex items-center gap-1"
             @click="handleSort('email')">
             Email

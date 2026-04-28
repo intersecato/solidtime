@@ -19,6 +19,7 @@ import { useFocus } from '@vueuse/core';
 import { autoUpdate, flip, limitShift, offset, shift, useFloating } from '@floating-ui/vue';
 import TimeTrackerRecentlyTrackedEntry from '@/packages/ui/src/TimeTracker/TimeTrackerRecentlyTrackedEntry.vue';
 import { useSelectEvents } from '@/packages/ui/src/utils/select';
+import { isBillableEnabled } from '@/utils/features';
 
 const currentTimeEntry = defineModel<TimeEntry>('currentTimeEntry', {
     required: true,
@@ -52,6 +53,8 @@ const emit = defineEmits<{
     createTimeEntry: [];
 }>();
 
+const billableEnabled = isBillableEnabled();
+
 function updateProject() {
     setBillableDefaultForProject();
     emit('updateTimeEntry');
@@ -71,7 +74,7 @@ function setCurrentTimeEntry(timeEntry: TimeEntry) {
     currentTimeEntry.value.project_id = timeEntry.project_id;
     currentTimeEntry.value.task_id = timeEntry.task_id;
     currentTimeEntry.value.tags = timeEntry.tags;
-    currentTimeEntry.value.billable = timeEntry.billable;
+    currentTimeEntry.value.billable = billableEnabled && timeEntry.billable;
 }
 
 function startTimerIfNotActive() {
@@ -95,6 +98,11 @@ function startTimerIfNotActive() {
 }
 
 function setBillableDefaultForProject() {
+    if (!billableEnabled) {
+        currentTimeEntry.value.billable = false;
+        return;
+    }
+
     const project = props.projects.find(
         (project) => project.id === currentTimeEntry.value.project_id
     );
@@ -146,7 +154,7 @@ const filteredRecentlyTrackedTimeEntries = computed(() => {
                     t.project_id === item.project_id &&
                     t.tags.length === item.tags.length &&
                     t.tags.every((tag) => item.tags.includes(tag)) &&
-                    t.billable === item.billable
+                    (!billableEnabled || t.billable === item.billable)
             )
         );
     });
@@ -276,6 +284,7 @@ useSelectEvents(
                         :tags="tags"
                         @changed="$emit('updateTimeEntry')"></TimeTrackerTagDropdown>
                     <BillableToggleButton
+                        v-if="billableEnabled"
                         v-model="currentTimeEntry.billable"
                         @changed="$emit('updateTimeEntry')"></BillableToggleButton>
                 </div>

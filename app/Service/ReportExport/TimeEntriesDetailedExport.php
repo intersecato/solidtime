@@ -39,15 +39,18 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
 
     private LocalizationService $localizationService;
 
+    private bool $showBillableRate;
+
     /**
      * @param  Builder<TimeEntry>  $builder
      */
-    public function __construct(Builder $builder, ExportFormat $exportFormat, string $timezone, LocalizationService $localizationService)
+    public function __construct(Builder $builder, ExportFormat $exportFormat, string $timezone, LocalizationService $localizationService, bool $showBillableRate)
     {
         $this->builder = $builder;
         $this->exportFormat = $exportFormat;
         $this->timezone = $timezone;
         $this->localizationService = $localizationService;
+        $this->showBillableRate = $showBillableRate;
     }
 
     /**
@@ -95,7 +98,7 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
      */
     public function headings(): array
     {
-        return [
+        $headings = [
             'Description',
             'Task',
             'Project',
@@ -105,9 +108,14 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
             'End',
             'Duration',
             'Duration (decimal)',
-            'Billable',
             'Tags',
         ];
+
+        if ($this->showBillableRate) {
+            array_splice($headings, 9, 0, ['Billable']);
+        }
+
+        return $headings;
     }
 
     /**
@@ -119,7 +127,7 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
         $duration = $model->getDuration();
 
         if ($this->exportFormat === ExportFormat::XLSX) {
-            return [
+            $row = [
                 $model->description,
                 $model->task?->name,
                 $model->project?->name,
@@ -129,11 +137,16 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
                 $model->end !== null ? Date::dateTimeToExcel($model->end->timezone($this->timezone)) : null,
                 $duration !== null ? $this->localizationService->formatInterval($duration) : null,
                 $duration?->totalHours,
-                $model->billable ? 'Yes' : 'No',
                 $model->tagsRelation->pluck('name')->implode(', '),
             ];
+
+            if ($this->showBillableRate) {
+                array_splice($row, 9, 0, [$model->billable ? 'Yes' : 'No']);
+            }
+
+            return $row;
         } elseif ($this->exportFormat === ExportFormat::ODS) {
-            return [
+            $row = [
                 $model->description,
                 $model->task?->name,
                 $model->project?->name,
@@ -143,9 +156,14 @@ class TimeEntriesDetailedExport implements FromQuery, ShouldAutoSize, WithColumn
                 $model->end?->timezone($this->timezone)?->format('Y-m-d H:i:s'),
                 $duration !== null ? $this->localizationService->formatInterval($duration) : null,
                 $duration?->totalHours,
-                $model->billable ? 'Yes' : 'No',
                 $model->tagsRelation->pluck('name')->implode(', '),
             ];
+
+            if ($this->showBillableRate) {
+                array_splice($row, 9, 0, [$model->billable ? 'Yes' : 'No']);
+            }
+
+            return $row;
         } else {
             throw new LogicException('Unsupported export format.');
         }

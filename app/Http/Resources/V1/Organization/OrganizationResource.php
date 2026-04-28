@@ -52,7 +52,7 @@ class OrganizationResource extends BaseResource
             /** @var int|null $billable_rate Billable rate in cents per hour */
             'billable_rate' => $this->showBillableRate ? $this->resource->billable_rate : null,
             /** @var bool $employees_can_see_billable_rates Can members of the organization with role "employee" see the billable rates */
-            'employees_can_see_billable_rates' => $this->resource->employees_can_see_billable_rates,
+            'employees_can_see_billable_rates' => $this->showBillableRate && $this->resource->employees_can_see_billable_rates,
             /** @var bool $employees_can_manage_tasks Can members of the organization with role "employee" manage tasks in public projects and projects they are assigned to */
             'employees_can_manage_tasks' => $this->resource->employees_can_manage_tasks,
             /** @var bool $prevent_overlapping_time_entries Prevent creating overlapping time entries (only new entries) */

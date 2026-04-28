@@ -22,6 +22,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ProjectMemberController extends Controller
 {
+    private function billableEnabled(): bool
+    {
+        return (bool) config('app.enable_billable', true);
+    }
+
     protected function checkPermission(Organization $organization, string $permission, ?Project $project = null, ?ProjectMember $projectMember = null): void
     {
         parent::checkPermission($organization, $permission);
@@ -74,13 +79,13 @@ class ProjectMemberController extends Controller
         }
 
         $projectMember = new ProjectMember;
-        $projectMember->billable_rate = $request->getBillableRate();
+        $projectMember->billable_rate = $this->billableEnabled() ? $request->getBillableRate() : null;
         $projectMember->member()->associate($member);
         $projectMember->user()->associate($member->user);
         $projectMember->project()->associate($project);
         $projectMember->save();
 
-        if ($request->getBillableRate() !== null) {
+        if ($this->billableEnabled() && $request->getBillableRate() !== null) {
             $billableRateService->updateTimeEntriesBillableRateForProjectMember($projectMember);
         }
 
@@ -98,10 +103,11 @@ class ProjectMemberController extends Controller
     {
         $this->checkPermission($organization, 'project-members:update', projectMember: $projectMember);
         $oldBillableRate = $projectMember->billable_rate;
-        $projectMember->billable_rate = $request->getBillableRate();
+        $newBillableRate = $this->billableEnabled() ? $request->getBillableRate() : null;
+        $projectMember->billable_rate = $newBillableRate;
         $projectMember->save();
 
-        if ($oldBillableRate !== $request->getBillableRate()) {
+        if ($this->billableEnabled() && $oldBillableRate !== $newBillableRate) {
             $billableRateService->updateTimeEntriesBillableRateForProjectMember($projectMember);
         }
 

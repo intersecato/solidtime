@@ -49,6 +49,7 @@ import type { ExportFormat } from '@/types/reporting';
 import { getRandomColorWithSeed } from '@/packages/ui/src/utils/color';
 import { useProjectsQuery } from '@/utils/useProjectsQuery';
 import { useAggregatedTimeEntriesQuery } from '@/utils/useAggregatedTimeEntriesQuery';
+import { isBillableEnabled } from '@/utils/features';
 
 type TimeEntryRoundingType = 'up' | 'down' | 'nearest';
 
@@ -80,17 +81,29 @@ const reportingStore = useReportingStore();
 const { groupByOptions, getNameForReportingRowEntry, emptyPlaceholder } = reportingStore;
 
 const organization = inject<ComputedRef<Organization>>('organization');
+const billableEnabled = isBillableEnabled();
 
 const showBillableRate = computed(() => {
     return !!(
-        getCurrentRole() !== 'employee' || organization?.value?.employees_can_see_billable_rates
+        billableEnabled &&
+        (getCurrentRole() !== 'employee' || organization?.value?.employees_can_see_billable_rates)
     );
 });
+
+const tableGridStyle = computed(
+    () => `grid-template-columns: 1fr 100px${showBillableRate.value ? ' 150px' : ''}`
+);
 
 // Ensure sub-group falls back when it collides with group
 watch(
     group,
     () => {
+        if (!groupByOptions.some((option) => option.value === group.value)) {
+            group.value = groupByOptions[0]?.value ?? 'project';
+        }
+        if (!groupByOptions.some((option) => option.value === subGroup.value)) {
+            subGroup.value = groupByOptions.find((option) => option.value !== group.value)?.value ?? 'task';
+        }
         if (group.value === subGroup.value) {
             const fallbackOption = groupByOptions.find((el) => el.value !== group.value);
             if (fallbackOption?.value) {
@@ -122,7 +135,7 @@ const filterParams = computed<AggregatedTimeEntriesQueryParams>(() => {
         task_ids: selectedTasks.value.length > 0 ? selectedTasks.value : undefined,
         client_ids: selectedClients.value.length > 0 ? selectedClients.value : undefined,
         tag_ids: selectedTags.value.length > 0 ? selectedTags.value : undefined,
-        billable: billable.value !== null ? billable.value : undefined,
+        billable: billableEnabled && billable.value !== null ? billable.value : undefined,
         member_id: getCurrentRole() === 'employee' ? getCurrentMembershipId() : undefined,
         rounding_type: roundingEnabled.value ? roundingType.value : undefined,
         rounding_minutes: roundingEnabled.value ? roundingMinutes.value : undefined,
@@ -168,7 +181,7 @@ const reportProperties = computed(() => {
 
     return {
         ...rest,
-        billable: billableValue,
+        billable: billableEnabled ? billableValue : null,
         group: group.value,
         sub_group: subGroup.value,
         history_group: getOptimalGroupingOption(startDate.value, endDate.value),
@@ -397,7 +410,7 @@ const tableData = computed(() => {
                 </div>
                 <div
                     class="grid items-center"
-                    :style="`grid-template-columns: 1fr 100px ${showBillableRate ? '150px' : ''}`">
+                    :style="tableGridStyle">
                     <div
                         class="contents [&>*]:border-card-background-separator [&>*]:border-b [&>*]:bg-secondary [&>*]:pb-1.5 [&>*]:pt-1 text-text-tertiary text-sm">
                         <div class="pl-6">Name</div>

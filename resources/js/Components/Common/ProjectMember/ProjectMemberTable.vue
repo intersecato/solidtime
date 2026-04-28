@@ -7,6 +7,7 @@ import { UserGroupIcon } from '@heroicons/vue/24/solid';
 import ProjectMemberTableHeading from '@/Components/Common/ProjectMember/ProjectMemberTableHeading.vue';
 import ProjectMemberCreateModal from '@/Components/Common/ProjectMember/ProjectMemberCreateModal.vue';
 import type { ProjectMember } from '@/packages/api/src';
+import { isBillableEnabled } from '@/utils/features';
 
 defineProps<{
     projectId: string;
@@ -14,6 +15,7 @@ defineProps<{
 }>();
 
 const createProjectMember = ref(false);
+const billableEnabled = isBillableEnabled();
 </script>
 
 <template>
@@ -26,7 +28,11 @@ const createProjectMember = ref(false);
             <div
                 data-testid="project_member_table"
                 class="grid min-w-full"
-                style="grid-template-columns: 1fr 150px 150px 80px">
+                :style="{
+                    gridTemplateColumns: billableEnabled
+                        ? '1fr 150px 150px 80px'
+                        : '1fr 150px 80px',
+                }">
                 <ProjectMemberTableHeading></ProjectMemberTableHeading>
                 <div v-if="projectMembers.length === 0" class="col-span-5 py-24 text-center">
                     <UserGroupIcon class="w-8 text-icon-default inline pb-2"></UserGroupIcon>

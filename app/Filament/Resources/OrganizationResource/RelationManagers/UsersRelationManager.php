@@ -36,6 +36,7 @@ class UsersRelationManager extends RelationManager
                     ->options(Role::class),
                 TextInput::make('billable_rate')
                     ->label('Billable rate (in Cents)')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->nullable()
                     ->numeric(),
             ]);
@@ -52,6 +53,7 @@ class UsersRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('name'),
                 Tables\Columns\TextColumn::make('role'),
                 TextColumn::make('billable_rate')
+                    ->visible(fn (): bool => (bool) config('app.enable_billable', true))
                     ->money($organization->currency, divideBy: 100),
             ])
             ->headerActions([
@@ -92,7 +94,11 @@ class UsersRelationManager extends RelationManager
                         /** @var Member $member */
                         $member = $record->getRelation('membership');
 
-                        if ($data['billable_rate'] !== $member->billable_rate) {
+                        if (
+                            (bool) config('app.enable_billable', true) &&
+                            array_key_exists('billable_rate', $data) &&
+                            $data['billable_rate'] !== $member->billable_rate
+                        ) {
                             $member->billable_rate = $data['billable_rate'];
                             app(BillableRateService::class)->updateTimeEntriesBillableRateForMember($member);
                         }

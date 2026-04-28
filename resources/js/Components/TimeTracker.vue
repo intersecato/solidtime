@@ -38,6 +38,7 @@ import { ref } from 'vue';
 import { useNotificationsStore } from '@/utils/notification';
 import { useTimeEntriesMutations } from '@/utils/useTimeEntriesMutations';
 import { useTimeEntriesInfiniteQuery } from '@/utils/useTimeEntriesInfiniteQuery';
+import { isBillableEnabled } from '@/utils/features';
 
 const page = usePage<{
     auth: {
@@ -53,6 +54,7 @@ const { organization } = useOrganizationQuery(getCurrentOrganizationId()!);
 const currentTimeEntryStore = useCurrentTimeEntryStore();
 const { currentTimeEntry, isActive, now } = storeToRefs(currentTimeEntryStore);
 const { startLiveTimer, stopLiveTimer, setActiveState } = currentTimeEntryStore;
+const billableEnabled = isBillableEnabled();
 
 const { projects } = useProjectsQuery();
 const { tasks } = useTasksQuery();
@@ -119,13 +121,24 @@ async function createTag(tag: string): Promise<Tag | undefined> {
 }
 
 async function createTimeEntry(timeEntry: Omit<CreateTimeEntryBody, 'member_id'>) {
-    await createTimeEntryMutation(timeEntry);
+    await createTimeEntryMutation({
+        ...timeEntry,
+        billable: billableEnabled && timeEntry.billable,
+    });
     showManualTimeEntryModal.value = false;
 }
 
 async function createTimeEntryFromCurrentEntry() {
     const { start, end, description, project_id, task_id, billable, tags } = currentTimeEntry.value;
-    await createTimeEntry({ start, end, description, project_id, task_id, billable, tags });
+    await createTimeEntry({
+        start,
+        end,
+        description,
+        project_id,
+        task_id,
+        billable: billableEnabled && billable,
+        tags,
+    });
     currentTimeEntryStore.$reset();
 }
 

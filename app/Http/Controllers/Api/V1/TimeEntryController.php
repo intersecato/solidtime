@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ExportFormat;
 use App\Enums\Role;
+use App\Enums\TimeEntryAggregationType;
 use App\Exceptions\Api\FeatureIsNotAvailableInFreePlanApiException;
 use App\Exceptions\Api\OverlappingTimeEntryApiException;
 use App\Exceptions\Api\PdfRendererIsNotConfiguredException;
@@ -59,6 +60,11 @@ use Spatie\TemporaryDirectory\TemporaryDirectory;
 
 class TimeEntryController extends Controller
 {
+    private function billableEnabled(): bool
+    {
+        return (bool) config('app.enable_billable', true);
+    }
+
     private function assertNoOverlap(Organization $organization, Member $member, \Illuminate\Support\Carbon $start, ?\Illuminate\Support\Carbon $end, ?TimeEntry $exclude = null): void
     {
         if (! $organization->prevent_overlapping_time_entries) {
@@ -206,7 +212,9 @@ class TimeEntryController extends Controller
         $filter->addTagIdsFilter($request->input('tag_ids'));
         $filter->addTaskIdsFilter($request->input('task_ids'));
         $filter->addClientIdsFilter($request->input('client_ids'));
-        $filter->addBillableFilter($request->input('billable'));
+        if ($this->billableEnabled()) {
+            $filter->addBillableFilter($request->input('billable'));
+        }
 
         return $filter->get();
     }
@@ -235,7 +243,8 @@ class TimeEntryController extends Controller
         }
         $user = $this->user();
         $timezone = $user->timezone;
-        $showBillableRate = $this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates;
+        $showBillableRate = $this->billableEnabled()
+            && ($this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates);
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
 
@@ -252,7 +261,7 @@ class TimeEntryController extends Controller
         $path = $folderPath.'/'.$filename;
         $localizationService = LocalizationService::forOrganization($organization);
         if ($format === ExportFormat::CSV) {
-            $export = new TimeEntriesDetailedCsvExport(config('filesystems.private'), $folderPath, $filename, $timeEntriesQuery, 1000, $timezone);
+            $export = new TimeEntriesDetailedCsvExport(config('filesystems.private'), $folderPath, $filename, $timeEntriesQuery, 1000, $timezone, $showBillableRate);
             $export->export();
         } elseif ($format === ExportFormat::PDF) {
             if (config('services.gotenberg.url') === null && ! $debug) {
@@ -319,7 +328,7 @@ class TimeEntryController extends Controller
                 ->putFileAs($folderPath, new File($tempFolder->path($filenameTemp)), $filename);
         } else {
             Excel::store(
-                new TimeEntriesDetailedExport($timeEntriesQuery, $format, $timezone, $localizationService),
+                new TimeEntriesDetailedExport($timeEntriesQuery, $format, $timezone, $localizationService, $showBillableRate),
                 $path,
                 config('filesystems.private'),
                 $format->getExportPackageType(),
@@ -378,10 +387,15 @@ class TimeEntryController extends Controller
         }
         $canAccessPremiumFeatures = $this->canAccessPremiumFeatures($organization);
         $user = $this->user();
-        $showBillableRate = $this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates;
+        $showBillableRate = $this->billableEnabled()
+            && ($this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates);
 
         $group1Type = $request->getGroup();
         $group2Type = $request->getSubGroup();
+        if (! $this->billableEnabled()) {
+            $group1Type = $group1Type === TimeEntryAggregationType::Billable ? null : $group1Type;
+            $group2Type = $group2Type === TimeEntryAggregationType::Billable ? null : $group2Type;
+        }
         $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $member);
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
@@ -432,10 +446,15 @@ class TimeEntryController extends Controller
         }
         $debug = $request->getDebug();
         $user = $this->user();
-        $showBillableRate = $this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates;
+        $showBillableRate = $this->billableEnabled()
+            && ($this->member($organization)->role !== Role::Employee->value || $organization->employees_can_see_billable_rates);
 
         $group = $request->getGroup();
         $subGroup = $request->getSubGroup();
+        if (! $this->billableEnabled()) {
+            $group = $group === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Project : $group;
+            $subGroup = $subGroup === TimeEntryAggregationType::Billable ? TimeEntryAggregationType::Task : $subGroup;
+        }
         $timeEntriesAggregateQuery = $this->getTimeEntriesAggregateQuery($organization, $request, $member);
         $roundingType = $canAccessPremiumFeatures ? $request->getRoundingType() : null;
         $roundingMinutes = $canAccessPremiumFeatures ? $request->getRoundingMinutes() : null;
@@ -562,7 +581,9 @@ class TimeEntryController extends Controller
         $filter->addTagIdsFilter($request->input('tag_ids'));
         $filter->addTaskIdsFilter($request->input('task_ids'));
         $filter->addClientIdsFilter($request->input('client_ids'));
-        $filter->addBillableFilter($request->input('billable'));
+        if ($this->billableEnabled()) {
+            $filter->addBillableFilter($request->input('billable'));
+        }
 
         return $filter->get();
     }
@@ -600,6 +621,10 @@ class TimeEntryController extends Controller
 
         $timeEntry = new TimeEntry;
         $timeEntry->fill($request->validated());
+        if (! $this->billableEnabled()) {
+            $timeEntry->billable = false;
+            $timeEntry->billable_rate = null;
+        }
         $timeEntry->client()->associate($client);
         $timeEntry->user_id = $member->user_id;
         $timeEntry->description = $request->input('description') ?? '';
@@ -660,6 +685,10 @@ class TimeEntryController extends Controller
         }
 
         $timeEntry->fill($request->validated());
+        if (! $this->billableEnabled()) {
+            $timeEntry->billable = false;
+            $timeEntry->billable_rate = null;
+        }
         $timeEntry->description = $request->input('description', $timeEntry->description) ?? '';
         $timeEntry->setComputedAttributeValue('billable_rate');
         $timeEntry->save();
@@ -709,6 +738,10 @@ class TimeEntryController extends Controller
             $changes['description'] = $request->input('changes.description') ?? '';
         }
 
+        if (! $this->billableEnabled()) {
+            unset($changes['billable'], $changes['billable_rate']);
+        }
+
         if (isset($changes['member_id']) && ! $canAccessAll && $this->member($organization)->getKey() !== $changes['member_id']) {
             throw new AuthorizationException;
         }
@@ -749,6 +782,10 @@ class TimeEntryController extends Controller
             $oldTask = $timeEntry->task;
 
             $timeEntry->fill($changes);
+            if (! $this->billableEnabled()) {
+                $timeEntry->billable = false;
+                $timeEntry->billable_rate = null;
+            }
             // If project is changed, but task is not, we remove the old task from the time entry
             if ($oldProject !== null && $project !== null && $oldProject->isNot($project) && $task === null) {
                 $timeEntry->task()->disassociate();

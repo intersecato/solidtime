@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\TimeEntryAggregationType;
 use App\Enums\Weekday;
 use App\Http\Requests\V1\Report\ReportIndexRequest;
 use App\Http\Requests\V1\Report\ReportStoreRequest;
@@ -87,12 +88,22 @@ class ReportController extends Controller
         $properties = new ReportPropertiesDto;
         $properties->group = $request->getPropertyGroup();
         $properties->subGroup = $request->getPropertySubGroup();
+        if (! (bool) config('app.enable_billable', true)) {
+            $properties->group = $properties->group === TimeEntryAggregationType::Billable
+                ? TimeEntryAggregationType::Project
+                : $properties->group;
+            $properties->subGroup = $properties->subGroup === TimeEntryAggregationType::Billable
+                ? TimeEntryAggregationType::Task
+                : $properties->subGroup;
+        }
         $properties->historyGroup = $request->getPropertyHistoryGroup();
         $properties->start = $request->getPropertyStart();
         $properties->end = $request->getPropertyEnd();
         $properties->active = $request->getPropertyActive();
         $properties->setMemberIds($request->input('properties.member_ids', null));
-        $properties->billable = $request->getPropertyBillable();
+        $properties->billable = (bool) config('app.enable_billable', true)
+            ? $request->getPropertyBillable()
+            : null;
         $properties->setClientIds($request->input('properties.client_ids', null));
         $properties->setProjectIds($request->input('properties.project_ids', null));
         $properties->setTagIds($request->input('properties.tag_ids', null));
