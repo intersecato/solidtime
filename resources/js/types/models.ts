@@ -38,7 +38,8 @@ export interface OrganizationInvitation {
     // columns
     id: string;
     organization_id: string;
-    email: string;
+    name: string | null;
+    email: string | null;
     role: string | null;
     created_at: string | null;
     updated_at: string | null;
@@ -82,6 +83,7 @@ export interface User {
     id: string;
     name: string;
     email: string;
+    oidc_linked?: boolean;
     email_verified_at: string | null;
     password?: string;
     remember_token?: string | null;

@@ -23,8 +23,15 @@ class InvitationStoreRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
+            'name' => [
+                'nullable',
+                'required_without:email',
+                'string',
+                'max:255',
+            ],
             'email' => [
-                'required',
+                'nullable',
+                'required_without:name',
                 'email',
             ],
             'role' => [
@@ -41,8 +48,17 @@ class InvitationStoreRequest extends BaseFormRequest
         return Role::from($this->input('role'));
     }
 
-    public function getEmail(): string
+    public function getEmail(): ?string
     {
-        return $this->input('email');
+        $email = $this->input('email');
+
+        return is_string($email) && trim($email) !== '' ? $email : null;
+    }
+
+    public function getName(): ?string
+    {
+        $name = $this->input('name');
+
+        return is_string($name) && trim($name) !== '' ? $name : null;
     }
 }

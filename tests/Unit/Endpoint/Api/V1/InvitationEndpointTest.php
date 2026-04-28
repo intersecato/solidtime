@@ -48,6 +48,7 @@ class InvitationEndpointTest extends ApiEndpointTestAbstract
             'data' => [
                 [
                     'id' => $invitation1->getKey(),
+                    'name' => $invitation1->name,
                     'email' => $invitation1->email,
                     'role' => $invitation1->role,
                 ],
@@ -180,6 +181,49 @@ class InvitationEndpointTest extends ApiEndpointTestAbstract
             'key' => 'invitation_for_the_email_already_exists',
             'message' => 'The email has already been invited to the organization. Please wait for the user to accept the invitation or resend the invitation email.',
         ]);
+    }
+
+    public function test_store_fails_without_email_or_name(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'invitations:create',
+        ]);
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.invitations.store', $data->organization->getKey()), [
+            'role' => Role::Employee->value,
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['name', 'email']);
+    }
+
+    public function test_store_invites_user_to_organization_by_name_only(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'invitations:create',
+        ]);
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->postJson(route('api.v1.invitations.store', $data->organization->getKey()), [
+            'name' => 'Jane Doe',
+            'role' => Role::Employee->value,
+        ]);
+
+        // Assert
+        $response->assertStatus(204);
+        $invitation = OrganizationInvitation::first();
+        $this->assertNotNull($invitation);
+        $this->assertEquals('Jane Doe', $invitation->name);
+        $this->assertNull($invitation->email);
+        $this->assertEquals(Role::Employee->value, $invitation->role);
+        Mail::assertNothingQueued();
+        Mail::assertNothingSent();
     }
 
     public function test_store_works_if_user_invites_user_who_is_also_a_placeholder(): void

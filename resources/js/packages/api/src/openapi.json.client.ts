@@ -39,10 +39,19 @@ const ClientUpdateRequest = z
     .passthrough();
 const ImportRequest = z.object({ type: z.string(), data: z.string() }).passthrough();
 const InvitationResource = z
-    .object({ id: z.string(), email: z.string(), role: z.string() })
+    .object({
+        id: z.string(),
+        name: z.union([z.string(), z.null()]),
+        email: z.union([z.string(), z.null()]),
+        role: z.string(),
+    })
     .passthrough();
 const InvitationStoreRequest = z
-    .object({ email: z.string().email(), role: z.enum(['admin', 'manager', 'employee']) })
+    .object({
+        name: z.union([z.string(), z.null()]).optional(),
+        email: z.union([z.string().email(), z.null()]).optional(),
+        role: z.enum(['admin', 'manager', 'employee']),
+    })
     .passthrough();
 const InvoiceResource = z
     .object({

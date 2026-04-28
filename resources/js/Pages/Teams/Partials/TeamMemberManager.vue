@@ -234,9 +234,7 @@ const displayableRole = (role: string) => {
                 <template #title> Pending Organization Invitations</template>
 
                 <template #description>
-                    These people have been invited to your organization and have been sent an
-                    invitation email. They may join the organization by accepting the email
-                    invitation.
+                    These people have been invited to your organization.
                 </template>
 
                 <!-- Pending Organization Member Invitation List -->
@@ -247,7 +245,7 @@ const displayableRole = (role: string) => {
                             :key="invitation.id"
                             class="flex items-center justify-between">
                             <div class="text-muted">
-                                {{ invitation.email }}
+                                {{ invitation.name ?? invitation.email }}
                             </div>
 
                             <div class="flex items-center">

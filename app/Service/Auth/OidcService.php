@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Auth;
 
+use App\Enums\Role;
 use App\Enums\Weekday;
+use App\Models\Member;
+use App\Models\OrganizationInvitation;
 use App\Models\User;
+use App\Service\MemberService;
 use App\Service\UserService;
 use Facile\JoseVerifier\JWK\JwksProviderBuilder;
 use Facile\OpenIDClient\Client\ClientBuilder;
@@ -41,7 +45,10 @@ class OidcService
 
     public const AUTH_SESSION_KEY = 'oidc.auth_session';
 
-    public function __construct(private readonly UserService $userService) {}
+    public function __construct(
+        private readonly UserService $userService,
+        private readonly MemberService $memberService,
+    ) {}
 
     public function isEnabled(): bool
     {
@@ -338,10 +345,11 @@ class OidcService
             ->first();
 
         if ($user !== null) {
-            return $this->syncProfilePhotoIfNeeded(
-                $this->markEmailVerifiedIfNeeded($user, $emailVerified),
-                $claims
-            );
+            $name = $this->nameFromClaims($claims, $email);
+            $user = $this->syncOidcProfileClaims($user, $name, $email, $emailVerified);
+            $this->acceptMatchingInvitations($user, $user->email, $name);
+
+            return $this->syncProfilePhotoIfNeeded($user, $claims);
         }
 
         /** @var User|null $user */
@@ -361,21 +369,18 @@ class OidcService
 
             $user->forceFill(['oidc_sub' => $subject])->save();
 
-            return $this->syncProfilePhotoIfNeeded(
-                $this->markEmailVerifiedIfNeeded($user, $emailVerified),
-                $claims
-            );
+            $name = $this->nameFromClaims($claims, $email);
+            $user = $this->syncOidcProfileClaims($user, $name, $email, $emailVerified);
+            $this->acceptMatchingInvitations($user, $user->email, $name);
+
+            return $this->syncProfilePhotoIfNeeded($user, $claims);
         }
 
         if (! (bool) config('services.oidc.auto_register')) {
             throw new RuntimeException('OIDC auto-registration is disabled.');
         }
 
-        $nameClaim = (string) config('services.oidc.name_claim');
-        $name = trim((string) ($claims[$nameClaim] ?? $claims['name'] ?? $claims['preferred_username'] ?? $email));
-        if ($name === '') {
-            $name = $email;
-        }
+        $name = $this->nameFromClaims($claims, $email);
 
         $user = $this->userService->createUser(
             $name,
@@ -392,17 +397,91 @@ class OidcService
             $emailVerified
         );
         $user->forceFill(['oidc_sub' => $subject])->save();
+        $this->acceptMatchingInvitations($user, $user->email, $name);
 
         return $this->syncProfilePhotoIfNeeded($user, $claims);
     }
 
-    private function markEmailVerifiedIfNeeded(User $user, bool $emailVerified): User
+    /**
+     * @param  array<string, mixed>  $claims
+     */
+    private function nameFromClaims(array $claims, string $fallbackEmail): string
     {
-        if ($emailVerified && $user->email_verified_at === null) {
-            $user->forceFill(['email_verified_at' => now()])->save();
+        $nameClaim = (string) config('services.oidc.name_claim');
+        $name = trim((string) ($claims[$nameClaim] ?? $claims['name'] ?? $claims['preferred_username'] ?? $fallbackEmail));
+
+        return $name !== '' ? $name : $fallbackEmail;
+    }
+
+    private function acceptMatchingInvitations(User $user, string $email, string $name): void
+    {
+        $normalizedName = $this->normalizeName($name);
+        $invitations = OrganizationInvitation::query()
+            ->with('organization')
+            ->where(function ($query) use ($email, $normalizedName): void {
+                $query->where('email', '=', $email)
+                    ->orWhere(function ($query) use ($normalizedName): void {
+                        $query->whereNull('email')
+                            ->whereRaw('lower(name) = ?', [$normalizedName]);
+                    });
+            })
+            ->get();
+
+        foreach ($invitations as $invitation) {
+            if ($invitation->organization === null) {
+                continue;
+            }
+
+            $alreadyMember = Member::query()
+                ->whereBelongsTo($invitation->organization, 'organization')
+                ->whereBelongsTo($user, 'user')
+                ->exists();
+
+            if (! $alreadyMember) {
+                $role = Role::tryFrom((string) $invitation->role) ?? Role::Employee;
+                $this->memberService->addMember($user, $invitation->organization, $role, true);
+            }
+
+            $invitation->delete();
+        }
+    }
+
+    private function normalizeName(string $name): string
+    {
+        $normalized = preg_replace('/\s+/', ' ', trim($name));
+
+        return Str::lower($normalized ?? '');
+    }
+
+    private function syncOidcProfileClaims(User $user, string $name, string $email, bool $emailVerified): User
+    {
+        $updates = [
+            'name' => $name,
+        ];
+
+        if ($email !== $user->email) {
+            $emailTaken = User::query()
+                ->active()
+                ->where('email', $email)
+                ->whereKeyNot($user->getKey())
+                ->exists();
+
+            if (! $emailTaken) {
+                $updates['email'] = $email;
+                $updates['email_verified_at'] = $emailVerified ? now() : null;
+            } else {
+                Log::warning('Skipped OIDC email sync because email is already in use.', [
+                    'user_id' => $user->getKey(),
+                    'email' => $email,
+                ]);
+            }
+        } elseif ($emailVerified && $user->email_verified_at === null) {
+            $updates['email_verified_at'] = now();
         }
 
-        return $user;
+        $user->forceFill($updates)->save();
+
+        return $user->refresh();
     }
 
     /**

@@ -36,7 +36,12 @@ class OrganizationInvitationResource extends Resource
                 Forms\Components\TextInput::make('email')
                     ->label('Email')
                     ->disabledOn(['edit'])
-                    ->required(),
+                    ->email()
+                    ->requiredWithout('name'),
+                Forms\Components\TextInput::make('name')
+                    ->label('Name')
+                    ->disabledOn(['edit'])
+                    ->requiredWithout('email'),
                 Select::make('role')
                     ->options(Role::class),
                 Forms\Components\Select::make('organization_id')
@@ -62,6 +67,8 @@ class OrganizationInvitationResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('organization.name')
                     ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('email')
                     ->sortable(),

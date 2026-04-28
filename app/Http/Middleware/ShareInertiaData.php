@@ -42,7 +42,8 @@ class ShareInertiaData
                         Jetstream::userHasTeamFeatures($user) &&
                         Gate::forUser($user)->check('create', Jetstream::newTeamModel()),
                     'canManageTwoFactorAuthentication' => Features::canManageTwoFactorAuthentication(),
-                    'canUpdatePassword' => Features::enabled(Features::updatePasswords()),
+                    'canUpdatePassword' => Features::enabled(Features::updatePasswords())
+                        && $user?->oidc_sub === null,
                     'canUpdateProfileInformation' => Features::canUpdateProfileInformation(),
                     'hasEmailVerification' => Features::enabled(Features::emailVerification()),
                     'flash' => $request->session()->get('flash', []),
@@ -67,6 +68,7 @@ class ShareInertiaData
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
+                        'oidc_linked' => $user->oidc_sub !== null,
                         'email_verified_at' => $user->email_verified_at,
                         'current_team_id' => $user->current_team_id,
                         'profile_photo_path' => $user->profile_photo_path,

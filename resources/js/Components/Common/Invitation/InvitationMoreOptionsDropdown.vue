@@ -11,6 +11,10 @@ const emit = defineEmits<{
     delete: [];
     resend: [];
 }>();
+
+defineProps<{
+    canResend?: boolean;
+}>();
 </script>
 
 <template>
@@ -35,6 +39,7 @@ const emit = defineEmits<{
         </DropdownMenuTrigger>
         <DropdownMenuContent class="min-w-[150px]" align="end">
             <DropdownMenuItem
+                v-if="canResend !== false"
                 data-testid="invitation_delete"
                 class="flex items-center space-x-3 cursor-pointer"
                 @click="emit('resend')">

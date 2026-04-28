@@ -83,6 +83,8 @@ const page = usePage<{
         hasEmailVerification: boolean;
     };
 }>();
+
+const oidcLinked = props.user.oidc_linked === true;
 </script>
 
 <template>
@@ -90,7 +92,7 @@ const page = usePage<{
         <template #title> Profile Information</template>
 
         <template #description>
-            Update your account's profile information and email address.
+            Update your account's profile information.
         </template>
 
         <template #form>
@@ -145,6 +147,8 @@ const page = usePage<{
                     type="text"
                     class="block w-full"
                     required
+                    :disabled="oidcLinked"
+                    :readonly="oidcLinked"
                     autocomplete="name" />
                 <FieldError v-if="form.errors.name">{{ form.errors.name }}</FieldError>
             </Field>
@@ -158,12 +162,16 @@ const page = usePage<{
                     type="email"
                     class="block w-full"
                     required
+                    :disabled="oidcLinked"
+                    :readonly="oidcLinked"
                     autocomplete="username" />
                 <FieldError v-if="form.errors.email">{{ form.errors.email }}</FieldError>
 
                 <div
                     v-if="
-                        page.props.jetstream.hasEmailVerification && user.email_verified_at === null
+                        !oidcLinked &&
+                        page.props.jetstream.hasEmailVerification &&
+                        user.email_verified_at === null
                     ">
                     <p class="text-sm mt-2 text-text-primary">
                         Your email address is unverified.

@@ -342,6 +342,7 @@ class JetstreamServiceProvider extends ServiceProvider
                             'team_invitations' => $teamModel->teamInvitations->map(function (OrganizationInvitation $invitation): array {
                                 return [
                                     'id' => $invitation->getKey(),
+                                    'name' => $invitation->name,
                                     'email' => $invitation->email,
                                     'role' => $invitation->role,
                                 ];

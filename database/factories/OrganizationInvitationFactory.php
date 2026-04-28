@@ -22,6 +22,7 @@ class OrganizationInvitationFactory extends Factory
     public function definition(): array
     {
         return [
+            'name' => $this->faker->name(),
             'email' => $this->faker->unique()->safeEmail(),
             'role' => Role::Employee->value,
             'organization_id' => Organization::factory(),

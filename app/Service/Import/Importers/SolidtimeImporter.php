@@ -74,14 +74,14 @@ class SolidtimeImporter extends DefaultImporter
             $membersReader->setEnclosure('"');
             $membersReader->setEscape('');
 
-            if (! file_exists($temporaryDirectory->path('organization_invitations.csv'))) {
-                throw new ImportException('File "organization_invitations.csv" missing in ZIP');
+            $organizationInvitationsReader = null;
+            if (file_exists($temporaryDirectory->path('organization_invitations.csv'))) {
+                $organizationInvitationsReader = Reader::createFromPath($temporaryDirectory->path('organization_invitations.csv'));
+                $organizationInvitationsReader->setHeaderOffset(0);
+                $organizationInvitationsReader->setDelimiter(',');
+                $organizationInvitationsReader->setEnclosure('"');
+                $organizationInvitationsReader->setEscape('');
             }
-            $organizationInvitationsReader = Reader::createFromPath($temporaryDirectory->path('organization_invitations.csv'));
-            $organizationInvitationsReader->setHeaderOffset(0);
-            $organizationInvitationsReader->setDelimiter(',');
-            $organizationInvitationsReader->setEnclosure('"');
-            $organizationInvitationsReader->setEscape('');
 
             if (! file_exists($temporaryDirectory->path('project_members.csv'))) {
                 throw new ImportException('File "project_members.csv" missing in ZIP');
@@ -159,6 +159,22 @@ class SolidtimeImporter extends DefaultImporter
                     'role' => Role::Placeholder->value,
                     'billable_rate' => $member['billable_rate'] === '' ? null : (int) $member['billable_rate'],
                 ], $member['id']);
+            }
+
+            if ($organizationInvitationsReader !== null) {
+                foreach ($organizationInvitationsReader as $organizationInvitation) {
+                    $email = $organizationInvitation['email'] ?? '';
+                    $name = $organizationInvitation['name'] ?? '';
+                    $this->organizationInvitationsImportHelper->getKey([
+                        'email' => $email === '' ? null : $email,
+                        'name' => $name === '' ? null : $name,
+                        'organization_id' => $this->organization->getKey(),
+                    ], [
+                        'role' => $organizationInvitation['role'] === ''
+                            ? Role::Employee->value
+                            : $organizationInvitation['role'],
+                    ], $organizationInvitation['id']);
+                }
             }
 
             foreach ($projectsReader as $project) {

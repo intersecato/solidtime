@@ -12,6 +12,10 @@ class OrganizationInvitationService
 {
     public function resend(OrganizationInvitation $invitation): void
     {
+        if ($invitation->email === null) {
+            return;
+        }
+
         Mail::to($invitation->email)
             ->queue(new OrganizationInvitationMail($invitation));
     }

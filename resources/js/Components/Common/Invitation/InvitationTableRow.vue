@@ -55,14 +55,23 @@ async function resendInvitation() {
     <TableRow>
         <div
             class="whitespace-nowrap px-3 py-4 text-sm text-text-secondary pl-4 sm:pl-6 lg:pl-8 3xl:pl-12">
-            {{ invitation.email }}
+            <div class="text-text-primary">{{ invitation.name ?? invitation.email }}</div>
+            <div v-if="invitation.name && invitation.email" class="text-xs text-text-tertiary">
+                {{ invitation.email }}
+            </div>
+            <div v-else-if="invitation.name && !invitation.email" class="text-xs text-text-tertiary">
+                SSO
+            </div>
         </div>
         <div class="whitespace-nowrap px-3 py-4 text-sm text-text-secondary">
             {{ capitalizeFirstLetter(invitation.role) }}
         </div>
         <div
             class="relative whitespace-nowrap flex items-center pl-3 text-right text-sm font-medium pr-4 sm:pr-6 lg:pr-8 3xl:pr-12">
-            <InvitationMoreOptionsDropdown @delete="deleteInvitation" @resend="resendInvitation" />
+            <InvitationMoreOptionsDropdown
+                :can-resend="invitation.email !== null"
+                @delete="deleteInvitation"
+                @resend="resendInvitation" />
         </div>
     </TableRow>
 </template>

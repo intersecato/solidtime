@@ -15,7 +15,8 @@ use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
 
 /**
  * @property string $id
- * @property string $email
+ * @property string|null $name
+ * @property string|null $email
  * @property string $role
  * @property string $organization_id
  * @property Carbon|null $updated_at
@@ -46,6 +47,7 @@ class OrganizationInvitation extends JetstreamTeamInvitation implements Auditabl
      * @var array<int, string>
      */
     protected $fillable = [
+        'name',
         'email',
         'role',
     ];

@@ -74,6 +74,7 @@ class ExportService
             $writer->setEscape('');
             $writer->insertOne([
                 'id',
+                'name',
                 'email',
                 'organization_id',
                 'role',
@@ -86,7 +87,8 @@ class ExportService
                     $organizationInvitations->each(function (OrganizationInvitation $organizationInvitation) use (&$writer): void {
                         $writer->insertOne([
                             $organizationInvitation->id,
-                            $organizationInvitation->email,
+                            $organizationInvitation->name ?? '',
+                            $organizationInvitation->email ?? '',
                             $organizationInvitation->organization_id,
                             $organizationInvitation->role,
                             $organizationInvitation->created_at?->toIso8601ZuluString() ?? '',

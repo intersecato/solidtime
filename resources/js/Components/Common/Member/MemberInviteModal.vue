@@ -26,11 +26,13 @@ defineProps<{
 }>();
 
 const errors = ref({
+    name: '',
     email: '',
     role: '',
 });
 
 const addTeamMemberForm = useForm({
+    name: '',
     email: '',
     role: null as string | null,
 });
@@ -39,13 +41,22 @@ const emit = defineEmits(['close']);
 const { handleApiRequestNotifications } = useNotificationsStore();
 
 async function submit() {
-    if (addTeamMemberForm.role === null || addTeamMemberForm.email === '') {
-        errors.value.email = z.string().email().safeParse(addTeamMemberForm.email).success
-            ? ''
-            : 'Please enter a valid email address';
+    const hasName = addTeamMemberForm.name.trim() !== '';
+    const hasEmail = addTeamMemberForm.email.trim() !== '';
+    const emailIsValid = !hasEmail || z.string().email().safeParse(addTeamMemberForm.email).success;
+
+    if (addTeamMemberForm.role === null || (!hasName && !hasEmail) || !emailIsValid) {
+        errors.value.name = !hasName && !hasEmail ? 'Please enter a name or email address' : '';
+        errors.value.email = emailIsValid ? '' : 'Please enter a valid email address';
         errors.value.role = addTeamMemberForm.role === null ? 'Please select a role' : '';
         return;
     }
+
+    errors.value = {
+        name: '',
+        email: '',
+        role: '',
+    };
 
     const organizationId = getCurrentOrganizationId();
     if (organizationId) {
@@ -53,7 +64,8 @@ async function submit() {
             () =>
                 api.invite(
                     {
-                        email: addTeamMemberForm.email,
+                        name: hasName ? addTeamMemberForm.name.trim() : null,
+                        email: hasEmail ? addTeamMemberForm.email.trim() : null,
                         role: addTeamMemberForm.role as MemberRole,
                     },
                     {
@@ -73,8 +85,8 @@ async function submit() {
     }
 }
 
-const clientNameInput = ref<HTMLInputElement | null>(null);
-useFocus(clientNameInput, { initialValue: true });
+const memberNameInput = ref<HTMLInputElement | null>(null);
+useFocus(memberNameInput, { initialValue: true });
 </script>
 
 <template>
@@ -111,17 +123,30 @@ useFocus(clientNameInput, { initialValue: true });
             </div>
             <div v-else class="space-y-4">
                 <Field class="col-span-6 sm:col-span-4 flex-1">
+                    <FieldLabel for="name">Name</FieldLabel>
+                    <TextInput
+                        id="name"
+                        ref="memberNameInput"
+                        v-model="addTeamMemberForm.name"
+                        name="name"
+                        type="text"
+                        placeholder="Member Name"
+                        class="block w-full"
+                        autocomplete="name"
+                        @keydown.enter="submit" />
+                    <FieldError v-if="errors.name">{{ errors.name }}</FieldError>
+                </Field>
+
+                <Field class="col-span-6 sm:col-span-4 flex-1">
                     <FieldLabel for="email">Email</FieldLabel>
                     <TextInput
                         id="email"
-                        ref="memberEmailInput"
                         v-model="addTeamMemberForm.email"
                         name="email"
-                        type="text"
+                        type="email"
                         placeholder="Member Email"
                         class="block w-full"
-                        required
-                        autocomplete="memberName"
+                        autocomplete="email"
                         @keydown.enter="submit" />
                     <FieldError v-if="errors.email">{{ errors.email }}</FieldError>
                 </Field>

@@ -12,6 +12,7 @@ use App\Models\Member;
 use App\Models\Organization;
 use App\Models\OrganizationInvitation;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Laravel\Jetstream\Events\InvitingTeamMember;
 
 class InvitationService
@@ -19,32 +20,50 @@ class InvitationService
     /**
      * @throws UserIsAlreadyMemberOfOrganizationApiException|InvitationForTheEmailAlreadyExistsApiException
      */
-    public function inviteUser(Organization $organization, string $email, Role $role): OrganizationInvitation
+    public function inviteUser(Organization $organization, ?string $email, Role $role, ?string $name = null): OrganizationInvitation
     {
-        if (Member::query()
-            ->whereBelongsTo($organization, 'organization')
-            ->whereRelation('user', 'email', '=', $email)
-            ->where('role', '!=', Role::Placeholder->value)
-            ->exists()) {
-            throw new UserIsAlreadyMemberOfOrganizationApiException;
+        $email = $email !== null ? Str::lower(trim($email)) : null;
+        $name = $name !== null ? trim($name) : null;
+
+        if ($email !== null) {
+            if (Member::query()
+                ->whereBelongsTo($organization, 'organization')
+                ->whereRelation('user', 'email', '=', $email)
+                ->where('role', '!=', Role::Placeholder->value)
+                ->exists()) {
+                throw new UserIsAlreadyMemberOfOrganizationApiException;
+            }
+
+            if (OrganizationInvitation::query()
+                ->where('email', $email)
+                ->whereBelongsTo($organization, 'organization')
+                ->exists()) {
+                throw new InvitationForTheEmailAlreadyExistsApiException;
+            }
         }
 
-        if (OrganizationInvitation::query()
-            ->where('email', $email)
+        if ($email === null && $name !== null && OrganizationInvitation::query()
+            ->whereNull('email')
+            ->whereRaw('lower(name) = ?', [Str::lower($name)])
             ->whereBelongsTo($organization, 'organization')
             ->exists()) {
             throw new InvitationForTheEmailAlreadyExistsApiException;
         }
 
-        InvitingTeamMember::dispatch($organization, $email, $role->value);
+        if ($email !== null) {
+            InvitingTeamMember::dispatch($organization, $email, $role->value);
+        }
 
         $invitation = new OrganizationInvitation;
+        $invitation->name = $name;
         $invitation->email = $email;
         $invitation->role = $role->value;
         $invitation->organization()->associate($organization);
         $invitation->save();
 
-        Mail::to($email)->queue(new OrganizationInvitationMail($invitation));
+        if ($email !== null) {
+            Mail::to($email)->queue(new OrganizationInvitationMail($invitation));
+        }
 
         return $invitation;
     }

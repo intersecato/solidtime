@@ -60,10 +60,11 @@ class InvitationController extends Controller
     {
         $this->checkPermission($organization, 'invitations:create');
 
+        $name = $request->getName();
         $email = $request->getEmail();
         $role = $request->getRole();
 
-        $invitationService->inviteUser($organization, $email, $role);
+        $invitationService->inviteUser($organization, $email, $role, $name);
 
         return response()->json(null, 204);
     }

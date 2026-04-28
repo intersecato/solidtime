@@ -24,6 +24,11 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
      */
     public function update(User $user, array $input): void
     {
+        if ($user->oidc_sub !== null) {
+            $input['name'] = $user->name;
+            $input['email'] = $user->email;
+        }
+
         Validator::make($input, [
             'name' => [
                 'required',
@@ -58,7 +63,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             $user->updateProfilePhoto($input['photo']);
         }
 
-        if ($input['email'] !== $user->email) {
+        if ($user->oidc_sub === null && $input['email'] !== $user->email) {
             $user->forceFill([
                 'name' => $input['name'],
                 'email' => $input['email'],
@@ -70,7 +75,7 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             $user->sendEmailVerificationNotification();
         } else {
             $user->forceFill([
-                'name' => $input['name'],
+                'name' => $user->oidc_sub === null ? $input['name'] : $user->name,
                 'timezone' => $input['timezone'],
                 'week_start' => $input['week_start'],
             ])->save();

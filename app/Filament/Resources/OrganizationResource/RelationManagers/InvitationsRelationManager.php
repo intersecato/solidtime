@@ -32,7 +32,12 @@ class InvitationsRelationManager extends RelationManager
                 TextInput::make('email')
                     ->label('Email')
                     ->disabledOn(['edit'])
-                    ->required(),
+                    ->email()
+                    ->requiredWithout('name'),
+                TextInput::make('name')
+                    ->label('Name')
+                    ->disabledOn(['edit'])
+                    ->requiredWithout('email'),
                 Select::make('role')
                     ->options(Role::class)
                     ->label('Role')
@@ -53,6 +58,7 @@ class InvitationsRelationManager extends RelationManager
             ->modelLabel('Invitation')
             ->pluralModelLabel('Invitations')
             ->columns([
+                Tables\Columns\TextColumn::make('name'),
                 Tables\Columns\TextColumn::make('email'),
                 Tables\Columns\TextColumn::make('role'),
             ])
@@ -64,7 +70,12 @@ class InvitationsRelationManager extends RelationManager
                         $ownerRecord = $this->getOwnerRecord();
 
                         return app(InvitationService::class)
-                            ->inviteUser($ownerRecord, $data['email'], Role::from($data['role']));
+                            ->inviteUser(
+                                $ownerRecord,
+                                $data['email'] ?? null,
+                                Role::from($data['role']),
+                                $data['name'] ?? null
+                            );
                     }),
             ])
             ->actions([

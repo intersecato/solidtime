@@ -165,12 +165,19 @@ abstract class DefaultImporter implements ImporterContract
                 'max:500',
             ],
         ]);
-        $this->organizationInvitationsImportHelper = new ImportDatabaseHelper(OrganizationInvitation::class, ['email', 'organization_id'], true, function (Builder $builder) {
+        $this->organizationInvitationsImportHelper = new ImportDatabaseHelper(OrganizationInvitation::class, ['email', 'name', 'organization_id'], true, function (Builder $builder) {
             /** @var Builder<OrganizationInvitation> $builder */
             return $builder->where('organization_id', $this->organization->id);
         }, validate: [
+            'name' => [
+                'nullable',
+                'required_without:email',
+                'string',
+                'max:255',
+            ],
             'email' => [
-                'required',
+                'nullable',
+                'required_without:name',
                 'email',
                 'max:255',
             ],
