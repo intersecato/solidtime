@@ -8,6 +8,8 @@ import TextInput from '@/packages/ui/src/Input/TextInput.vue';
 
 defineProps<{
     canResetPassword?: boolean;
+    canRegister?: boolean;
+    passwordLoginEnabled?: boolean;
     status?: string;
     oidc?: {
         enabled: boolean;
@@ -48,6 +50,7 @@ const page = usePage<{
 
         <template #actions>
             <Link
+                v-if="canRegister"
                 class="py-8 text-text-secondary text-sm font-medium opacity-90 hover:opacity-100 transition"
                 :href="route('register')">
                 No account yet? <span class="text-text-primary">Register here!</span>
@@ -70,14 +73,16 @@ const page = usePage<{
                 {{ oidc.label }}
             </a>
 
-            <div class="mt-6 flex items-center gap-3 text-xs uppercase tracking-wide text-text-secondary">
+            <div
+                v-if="passwordLoginEnabled"
+                class="mt-6 flex items-center gap-3 text-xs uppercase tracking-wide text-text-secondary">
                 <div class="h-px flex-1 bg-card-background-separator"></div>
                 <span>or</span>
                 <div class="h-px flex-1 bg-card-background-separator"></div>
             </div>
         </div>
 
-        <form @submit.prevent="submit">
+        <form v-if="passwordLoginEnabled" @submit.prevent="submit">
             <Field>
                 <FieldLabel for="email">Email</FieldLabel>
                 <TextInput

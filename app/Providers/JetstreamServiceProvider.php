@@ -68,6 +68,8 @@ class JetstreamServiceProvider extends ServiceProvider
 
             return Inertia::render('Auth/Login', [
                 'canResetPassword' => Route::has('password.request'),
+                'canRegister' => (bool) config('app.enable_registration') && Route::has('register'),
+                'passwordLoginEnabled' => (bool) config('auth.password_login_enabled', true),
                 'status' => $request->session()->get('status'),
                 'oidc' => [
                     'enabled' => $oidcEnabled,
@@ -77,6 +79,8 @@ class JetstreamServiceProvider extends ServiceProvider
             ]);
         });
         Fortify::registerView(function () {
+            abort_unless((bool) config('app.enable_registration'), 404);
+
             return Inertia::render('Auth/Register', [
                 'terms_url' => config('auth.terms_url'),
                 'privacy_policy_url' => config('auth.privacy_policy_url'),

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\TwoFactorLoginResponse;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\Http\Responses\LoginResponse;
@@ -42,6 +43,12 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
         Fortify::authenticateUsing(function (Request $request): ?User {
+            if (! (bool) config('auth.password_login_enabled', true)) {
+                throw ValidationException::withMessages([
+                    Fortify::username() => [__('Password login is disabled.')],
+                ]);
+            }
+
             /** @var User|null $user */
             $user = User::query()
                 ->where('email', $request->email)

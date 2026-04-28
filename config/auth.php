@@ -117,6 +117,8 @@ return [
 
     'super_admins' => ! is_string(env('SUPER_ADMINS', null)) ? [] : explode(',', env('SUPER_ADMINS')),
 
+    'password_login_enabled' => (bool) env('AUTH_PASSWORD_LOGIN_ENABLED', true),
+
     'terms_url' => env('TERMS_URL', ''),
 
     'privacy_policy_url' => env('PRIVACY_POLICY_URL', ''),
