@@ -59,12 +59,12 @@ return [
     |
     */
 
-    'features' => [
+    'features' => array_values(array_filter([
         Features::termsAndPrivacyPolicy(),
         Features::profilePhotos(),
         Features::teams(['invitations' => true]),
-        Features::accountDeletion(),
-    ],
+        (bool) env('APP_ENABLE_ACCOUNT_DELETION', true) ? Features::accountDeletion() : null,
+    ])),
 
     /*
     |--------------------------------------------------------------------------

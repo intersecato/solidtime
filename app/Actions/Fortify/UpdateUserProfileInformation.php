@@ -25,6 +25,15 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
     public function update(User $user, array $input): void
     {
         if ($user->oidc_sub !== null) {
+            if (isset($input['photo'])) {
+                $exception = ValidationException::withMessages([
+                    'photo' => [__('Profile photos are managed by your SSO provider.')],
+                ]);
+                $exception->errorBag = 'updateProfileInformation';
+
+                throw $exception;
+            }
+
             $input['name'] = $user->name;
             $input['email'] = $user->email;
         }

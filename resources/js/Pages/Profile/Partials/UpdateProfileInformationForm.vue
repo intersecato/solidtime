@@ -27,7 +27,12 @@ const photoPreview = ref<ArrayBuffer | undefined | string | null>(null);
 const photoInput = ref<HTMLInputElement | null>(null);
 
 const updateProfileInformation = () => {
-    if (photoInput.value && photoInput.value.files && photoInput.value.files?.length > 0) {
+    if (
+        !oidcLinked &&
+        photoInput.value &&
+        photoInput.value.files &&
+        photoInput.value.files?.length > 0
+    ) {
         form.photo = photoInput.value?.files[0] ?? null;
     }
 
@@ -43,6 +48,8 @@ const sendEmailVerification = () => {
 };
 
 const selectNewPhoto = () => {
+    if (oidcLinked) return;
+
     photoInput.value?.click();
 };
 
@@ -62,6 +69,8 @@ const updatePhotoPreview = () => {
 };
 
 const deletePhoto = () => {
+    if (oidcLinked) return;
+
     router.delete(route('current-user-photo.destroy'), {
         preserveScroll: true,
         onSuccess: () => {
@@ -104,6 +113,7 @@ const oidcLinked = props.user.oidc_linked === true;
                     ref="photoInput"
                     type="file"
                     class="hidden"
+                    :disabled="oidcLinked"
                     @change="updatePhotoPreview" />
 
                 <FieldLabel for="photo">Photo</FieldLabel>
@@ -123,12 +133,16 @@ const oidcLinked = props.user.oidc_linked === true;
                         :style="'background-image: url(\'' + photoPreview + '\');'" />
                 </div>
 
-                <SecondaryButton class="mt-2 me-2" type="button" @click.prevent="selectNewPhoto">
+                <SecondaryButton
+                    v-if="!oidcLinked"
+                    class="mt-2 me-2"
+                    type="button"
+                    @click.prevent="selectNewPhoto">
                     Select A New Photo
                 </SecondaryButton>
 
                 <SecondaryButton
-                    v-if="user.profile_photo_path"
+                    v-if="!oidcLinked && user.profile_photo_path"
                     type="button"
                     class="mt-2"
                     @click.prevent="deletePhoto">
