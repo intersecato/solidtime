@@ -23,6 +23,8 @@ use Facile\OpenIDClient\Token\TokenSetInterface;
 use GuzzleHttp\Client as GuzzleClient;
 use GuzzleHttp\Psr7\HttpFactory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Psr\Http\Client\ClientInterface as PsrHttpClient;
 use Psr\Http\Message\RequestFactoryInterface;
@@ -253,7 +255,10 @@ class OidcService
             ->first();
 
         if ($user !== null) {
-            return $this->markEmailVerifiedIfNeeded($user, $emailVerified);
+            return $this->syncProfilePhotoIfNeeded(
+                $this->markEmailVerifiedIfNeeded($user, $emailVerified),
+                $claims
+            );
         }
 
         /** @var User|null $user */
@@ -273,7 +278,10 @@ class OidcService
 
             $user->forceFill(['oidc_sub' => $subject])->save();
 
-            return $this->markEmailVerifiedIfNeeded($user, $emailVerified);
+            return $this->syncProfilePhotoIfNeeded(
+                $this->markEmailVerifiedIfNeeded($user, $emailVerified),
+                $claims
+            );
         }
 
         if (! (bool) config('services.oidc.auto_register')) {
@@ -302,7 +310,7 @@ class OidcService
         );
         $user->forceFill(['oidc_sub' => $subject])->save();
 
-        return $user;
+        return $this->syncProfilePhotoIfNeeded($user, $claims);
     }
 
     private function markEmailVerifiedIfNeeded(User $user, bool $emailVerified): User
@@ -312,6 +320,91 @@ class OidcService
         }
 
         return $user;
+    }
+
+    /**
+     * @param  array<string, mixed>  $claims
+     */
+    private function syncProfilePhotoIfNeeded(User $user, array $claims): User
+    {
+        if (! (bool) config('services.oidc.sync_profile_photo')) {
+            return $user;
+        }
+
+        $pictureClaim = (string) config('services.oidc.picture_claim', 'picture');
+        $pictureUrl = $claims[$pictureClaim] ?? $claims['picture'] ?? null;
+        if (! is_string($pictureUrl) || $pictureUrl === '') {
+            return $user;
+        }
+
+        $scheme = parse_url($pictureUrl, PHP_URL_SCHEME);
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            return $user;
+        }
+
+        try {
+            $photo = $this->downloadProfilePhoto($pictureUrl);
+            if ($photo === null) {
+                return $user;
+            }
+
+            [$contents, $extension] = $photo;
+            $diskName = (string) config('jetstream.profile_photo_disk', 'public');
+            $disk = Storage::disk($diskName);
+            $previousPath = $user->profile_photo_path;
+            $path = 'profile-photos/'.Str::random(40).'.'.$extension;
+
+            $disk->put($path, $contents);
+            $user->forceFill(['profile_photo_path' => $path])->save();
+
+            if ($previousPath !== null && $previousPath !== $path) {
+                $disk->delete($previousPath);
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to sync OIDC profile photo.', [
+                'user_id' => $user->getKey(),
+                'picture_url' => $pictureUrl,
+                'exception' => $exception,
+            ]);
+        }
+
+        return $user->refresh();
+    }
+
+    /**
+     * @return array{string, string}|null
+     */
+    private function downloadProfilePhoto(string $pictureUrl): ?array
+    {
+        $response = (new GuzzleClient([
+            'timeout' => (float) config('services.oidc.http_timeout'),
+            'http_errors' => false,
+            'allow_redirects' => true,
+        ]))->get($pictureUrl);
+
+        if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+            return null;
+        }
+
+        $contentType = strtolower(trim(explode(';', $response->getHeaderLine('Content-Type'))[0] ?? ''));
+        $extension = match ($contentType) {
+            'image/jpeg', 'image/jpg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'image/gif' => 'gif',
+            default => null,
+        };
+        if ($extension === null) {
+            return null;
+        }
+
+        $contents = (string) $response->getBody();
+        $maxBytes = (int) config('services.oidc.profile_photo_max_bytes', 1024 * 1024);
+        if ($contents === '' || strlen($contents) > $maxBytes) {
+            return null;
+        }
+
+        return [$contents, $extension];
     }
 
     private function redirectUri(): string
