@@ -6,10 +6,15 @@ import { Field, FieldLabel, FieldError } from '@/packages/ui/src/field';
 import PrimaryButton from '@/packages/ui/src/Buttons/PrimaryButton.vue';
 import TextInput from '@/packages/ui/src/Input/TextInput.vue';
 
-defineProps({
-    canResetPassword: Boolean,
-    status: String,
-});
+defineProps<{
+    canResetPassword?: boolean;
+    status?: string;
+    oidc?: {
+        enabled: boolean;
+        label: string;
+        url: string | null;
+    };
+}>();
 
 const form = useForm({
     email: '',
@@ -56,6 +61,20 @@ const page = usePage<{
             v-if="page.props.flash?.message"
             class="bg-red-400 text-black text-center w-full px-3 py-1 mb-4 rounded-lg">
             {{ page.props.flash?.message }}
+        </div>
+
+        <div v-if="oidc?.enabled && oidc.url" class="mb-6">
+            <a
+                :href="oidc.url"
+                class="flex w-full items-center justify-center rounded-md border border-border bg-card-background px-4 py-2.5 text-sm font-medium text-text-primary transition hover:border-text-secondary hover:bg-card-background-separator focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                {{ oidc.label }}
+            </a>
+
+            <div class="mt-6 flex items-center gap-3 text-xs uppercase tracking-wide text-text-secondary">
+                <div class="h-px flex-1 bg-card-background-separator"></div>
+                <span>or</span>
+                <div class="h-px flex-1 bg-card-background-separator"></div>
+            </div>
         </div>
 
         <form @submit.prevent="submit">

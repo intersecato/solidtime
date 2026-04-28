@@ -24,6 +24,7 @@ use Brick\Money\Currency;
 use Brick\Money\ISOCurrencyProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use Laravel\Fortify\Fortify;
@@ -60,6 +61,21 @@ class JetstreamServiceProvider extends ServiceProvider
         Jetstream::useTeamInvitationModel(OrganizationInvitation::class);
         app()->singleton(UpdateTeamMemberRole::class, UpdateMemberRole::class);
         app()->singleton(ValidateTeamDeletion::class, ValidateOrganizationDeletion::class);
+        Fortify::loginView(function (Request $request) {
+            $oidcEnabled = (bool) config('services.oidc.enabled')
+                && filled(config('services.oidc.issuer'))
+                && filled(config('services.oidc.client_id'));
+
+            return Inertia::render('Auth/Login', [
+                'canResetPassword' => Route::has('password.request'),
+                'status' => $request->session()->get('status'),
+                'oidc' => [
+                    'enabled' => $oidcEnabled,
+                    'label' => (string) config('services.oidc.button_label'),
+                    'url' => $oidcEnabled ? route('oidc.redirect') : null,
+                ],
+            ]);
+        });
         Fortify::registerView(function () {
             return Inertia::render('Auth/Register', [
                 'terms_url' => config('auth.terms_url'),
