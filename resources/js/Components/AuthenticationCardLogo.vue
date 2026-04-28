@@ -5,6 +5,7 @@ const page = usePage<{
     app?: {
         login_logo_url?: string | null;
         login_logo_alt?: string | null;
+        login_logo_height?: string | null;
     };
 }>();
 </script>
@@ -15,7 +16,8 @@ const page = usePage<{
             v-if="page.props.app?.login_logo_url"
             :src="page.props.app.login_logo_url"
             :alt="page.props.app.login_logo_alt ?? 'Logo'"
-            class="h-12 max-w-56 object-contain" />
+            :style="{ height: page.props.app.login_logo_height ?? '3rem' }"
+            class="max-w-80 object-contain" />
         <svg
             v-else
             class="h-12 py-2 text-text-primary"

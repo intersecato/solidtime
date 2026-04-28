@@ -123,6 +123,8 @@ return [
 
     'login_logo_alt' => env('AUTH_LOGIN_LOGO_ALT', env('APP_NAME', 'solidtime')),
 
+    'login_logo_height' => env('AUTH_LOGIN_LOGO_HEIGHT', '3rem'),
+
     'terms_url' => env('TERMS_URL', ''),
 
     'privacy_policy_url' => env('PRIVACY_POLICY_URL', ''),

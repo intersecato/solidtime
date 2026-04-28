@@ -30,6 +30,7 @@ class ShareInertiaData
             'app' => [
                 'login_logo_url' => config('auth.login_logo_url'),
                 'login_logo_alt' => config('auth.login_logo_alt'),
+                'login_logo_height' => config('auth.login_logo_height'),
             ],
             'jetstream' => function () use ($request) {
                 /** @var User|null $user */
