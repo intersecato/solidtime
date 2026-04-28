@@ -15,7 +15,7 @@ return new class extends Migration
         DB::statement("update organizations set date_format = 'point-separated-d-m-yyyy' where date_format = 'point-seperated-d-m-yyyy'");
         DB::statement("update organizations set date_format = 'slash-separated-mm-dd-yyyy' where date_format = 'slash-seperated-mm-dd-yyyy'");
         DB::statement("update organizations set date_format = 'slash-separated-dd-mm-yyyy' where date_format = 'slash-seperated-dd-mm-yyyy'");
-        DB::statement("update organizations set date_format = 'hyphen-separated-dd-mm-yyyy'where date_format = 'hyphen-seperated-dd-mm-yyyy'");
+        DB::statement("update organizations set date_format = 'hyphen-separated-dd-mm-yyyy' where date_format = 'hyphen-seperated-dd-mm-yyyy'");
         DB::statement("update organizations set date_format = 'hyphen-separated-mm-dd-yyyy' where date_format = 'hyphen-seperated-mm-dd-yyyy'");
         DB::statement("update organizations set date_format = 'hyphen-separated-yyyy-mm-dd' where date_format = 'hyphen-seperated-yyyy-mm-dd'");
 
@@ -33,7 +33,7 @@ return new class extends Migration
         DB::statement("update organizations set date_format = 'point-seperated-d-m-yyyy' where date_format = 'point-separated-d-m-yyyy'");
         DB::statement("update organizations set date_format = 'slash-seperated-mm-dd-yyyy' where date_format = 'slash-separated-mm-dd-yyyy'");
         DB::statement("update organizations set date_format = 'slash-seperated-dd-mm-yyyy' where date_format = 'slash-separated-dd-mm-yyyy'");
-        DB::statement("update organizations set date_format = 'hyphen-seperated-dd-mm-yyyy'where date_format = 'hyphen-separated-dd-mm-yyyy'");
+        DB::statement("update organizations set date_format = 'hyphen-seperated-dd-mm-yyyy' where date_format = 'hyphen-separated-dd-mm-yyyy'");
         DB::statement("update organizations set date_format = 'hyphen-seperated-mm-dd-yyyy' where date_format = 'hyphen-separated-mm-dd-yyyy'");
         DB::statement("update organizations set date_format = 'hyphen-seperated-yyyy-mm-dd' where date_format = 'hyphen-separated-yyyy-mm-dd'");
 

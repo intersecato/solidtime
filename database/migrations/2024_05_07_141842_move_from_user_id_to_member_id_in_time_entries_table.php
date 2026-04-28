@@ -15,20 +15,31 @@ return new class extends Migration
     public function up(): void
     {
 
-        Schema::table('time_entries', function (Blueprint $table): void {
-            $table->foreignUuid('member_id')
-                ->nullable()
-                ->constrained('organization_user')
-                ->cascadeOnDelete()
-                ->cascadeOnUpdate();
-        });
-        DB::statement('
-            update time_entries
-            set member_id = organization_user.id
-            from organization_user
-            where time_entries.organization_id = organization_user.organization_id and
-                  time_entries.user_id = organization_user.user_id
-        ');
+        if (! Schema::hasColumn('time_entries', 'member_id')) {
+            Schema::table('time_entries', function (Blueprint $table): void {
+                $table->foreignUuid('member_id')
+                    ->nullable()
+                    ->constrained('organization_user')
+                    ->cascadeOnDelete()
+                    ->cascadeOnUpdate();
+            });
+        }
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement('
+                update time_entries
+                join organization_user on time_entries.organization_id = organization_user.organization_id
+                    and time_entries.user_id = organization_user.user_id
+                set time_entries.member_id = organization_user.id
+            ');
+        } else {
+            DB::statement('
+                update time_entries
+                set member_id = organization_user.id
+                from organization_user
+                where time_entries.organization_id = organization_user.organization_id and
+                      time_entries.user_id = organization_user.user_id
+            ');
+        }
         Schema::table('time_entries', function (Blueprint $table): void {
             $table->uuid('member_id')->nullable(false)->change();
         });
