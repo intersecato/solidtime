@@ -49,6 +49,7 @@ Route::prefix('v1')->name('v1.')->group(static function (): void {
         // Member routes
         Route::name('members.')->prefix('/organizations/{organization}')->group(static function (): void {
             Route::get('/members', [MemberController::class, 'index'])->name('index');
+            Route::get('/members/active-timer', [MemberController::class, 'activeTimerByNick'])->name('active-timer-by-nick');
             Route::put('/members/{member}', [MemberController::class, 'update'])->name('update');
             Route::delete('/members/{member}', [MemberController::class, 'destroy'])->name('destroy');
             Route::post('/members/{member}/invite-placeholder', [MemberController::class, 'invitePlaceholder'])->name('invite-placeholder');

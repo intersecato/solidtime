@@ -23,14 +23,17 @@ use App\Http\Requests\V1\Member\MemberMergeIntoRequest;
 use App\Http\Requests\V1\Member\MemberUpdateRequest;
 use App\Http\Resources\V1\Member\MemberCollection;
 use App\Http\Resources\V1\Member\MemberResource;
+use App\Http\Resources\V1\TimeEntry\TimeEntryResource;
 use App\Models\Member;
 use App\Models\Organization;
+use App\Models\TimeEntry;
 use App\Service\BillableRateService;
 use App\Service\InvitationService;
 use App\Service\MemberService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -69,6 +72,65 @@ class MemberController extends Controller
             ->paginate(config('app.pagination_per_page_default'));
 
         return MemberCollection::make($members);
+    }
+
+    /**
+     * Check whether a member identified by nickname/name has an active timer.
+     *
+     * The match is case-insensitive against the user's name inside the organization.
+     *
+     * @throws AuthorizationException
+     *
+     * @operationId getMemberActiveTimerByNick
+     */
+    public function activeTimerByNick(Organization $organization, Request $request): JsonResponse
+    {
+        $request->validate([
+            'nick' => [
+                'required',
+                'string',
+                'min:1',
+                'max:255',
+            ],
+        ]);
+
+        $nick = Str::lower(Str::trim((string) $request->query('nick')));
+
+        /** @var Member|null $member */
+        $member = Member::query()
+            ->whereBelongsTo($organization, 'organization')
+            ->whereHas('user', function ($query) use ($nick): void {
+                $query->whereRaw('LOWER(name) = ?', [$nick]);
+            })
+            ->with('user')
+            ->firstOrFail();
+
+        if ($member->user_id === $this->user()->getKey()) {
+            $this->checkPermission($organization, 'time-entries:view:own');
+        } else {
+            $this->checkPermission($organization, 'time-entries:view:all');
+        }
+
+        $activeTimeEntry = TimeEntry::query()
+            ->whereBelongsTo($organization, 'organization')
+            ->whereBelongsTo($member, 'member')
+            ->whereNull('end')
+            ->orderBy('start', 'desc')
+            ->first();
+
+        return response()->json([
+            'nick' => $member->user->name,
+            'active' => $activeTimeEntry !== null,
+            'member' => [
+                'id' => $member->id,
+                'user_id' => $member->user_id,
+                'name' => $member->user->name,
+                'email' => $member->user->email,
+            ],
+            'time_entry' => $activeTimeEntry !== null
+                ? (new TimeEntryResource($activeTimeEntry))->resolve($request)
+                : null,
+        ]);
     }
 
     /**
