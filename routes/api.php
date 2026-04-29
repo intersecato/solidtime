@@ -103,6 +103,7 @@ Route::prefix('v1')->name('v1.')->group(static function (): void {
         // Time entry routes
         Route::name('time-entries.')->prefix('/organizations/{organization}')->group(static function (): void {
             Route::get('/time-entries', [TimeEntryController::class, 'index'])->name('index');
+            Route::get('/time-entries/daily-activities', [TimeEntryController::class, 'dailyActivities'])->name('daily-activities');
             Route::get('/time-entries/export', [TimeEntryController::class, 'indexExport'])->name('index-export');
             Route::get('/time-entries/aggregate', [TimeEntryController::class, 'aggregate'])->name('aggregate');
             Route::get('/time-entries/aggregate/export', [TimeEntryController::class, 'aggregateExport'])->name('aggregate-export');

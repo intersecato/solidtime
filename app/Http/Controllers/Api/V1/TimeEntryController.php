@@ -14,6 +14,7 @@ use App\Exceptions\Api\TimeEntryCanNotBeRestartedApiException;
 use App\Exceptions\Api\TimeEntryStillRunningApiException;
 use App\Http\Requests\V1\TimeEntry\TimeEntryAggregateExportRequest;
 use App\Http\Requests\V1\TimeEntry\TimeEntryAggregateRequest;
+use App\Http\Requests\V1\TimeEntry\TimeEntryDailyActivitiesRequest;
 use App\Http\Requests\V1\TimeEntry\TimeEntryDestroyMultipleRequest;
 use App\Http\Requests\V1\TimeEntry\TimeEntryIndexExportRequest;
 use App\Http\Requests\V1\TimeEntry\TimeEntryIndexRequest;
@@ -187,6 +188,59 @@ class TimeEntryController extends Controller
                     'total' => $totalCount,
                 ],
             ]);
+    }
+
+    /**
+     * Get a simple list of daily activities for all organization members.
+     *
+     * @return JsonResponse
+     *
+     * @throws AuthorizationException
+     *
+     * @operationId getDailyActivities
+     *
+     * @response array{data: array<int, array{description: string|null, task: string|null, author: string, start_time: string, end_time: string|null}>}
+     */
+    public function dailyActivities(Organization $organization, TimeEntryDailyActivitiesRequest $request): JsonResponse
+    {
+        $this->checkPermission($organization, 'time-entries:view:all');
+
+        $timezone = app(TimezoneService::class)->getTimezoneFromUser($this->user());
+        $date = $request->getDate($timezone);
+
+        $start = $date->copy()->startOfDay()->utc();
+        $end = $date->copy()->addDay()->startOfDay()->utc();
+
+        $activities = TimeEntry::query()
+            ->whereBelongsTo($organization, 'organization')
+            ->where('start', '>=', $start)
+            ->where('start', '<', $end)
+            ->with([
+                'task:id,name',
+                'user:id,name',
+            ])
+            ->orderBy('start')
+            ->get([
+                'id',
+                'description',
+                'start',
+                'end',
+                'task_id',
+                'user_id',
+                'organization_id',
+            ])
+            ->map(fn (TimeEntry $timeEntry): array => [
+                'description' => $timeEntry->description,
+                'task' => $timeEntry->task?->name,
+                'author' => $timeEntry->user->name,
+                'start_time' => $timeEntry->start->timezone($timezone)->format('H:i'),
+                'end_time' => $timeEntry->end?->timezone($timezone)->format('H:i'),
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => $activities,
+        ]);
     }
 
     /**

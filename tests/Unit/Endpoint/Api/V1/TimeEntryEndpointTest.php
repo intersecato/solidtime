@@ -4351,4 +4351,96 @@ class TimeEntryEndpointTest extends ApiEndpointTestAbstract
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', $timeEntryWithoutTag->getKey());
     }
+
+    public function test_daily_activities_endpoint_fails_if_user_has_no_permission_to_view_all_time_entries(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:own',
+        ]);
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.daily-activities', [
+            $data->organization->getKey(),
+            'date' => '2026-04-29',
+        ]));
+
+        // Assert
+        $response->assertForbidden();
+    }
+
+    public function test_daily_activities_endpoint_returns_description_task_and_author_for_date(): void
+    {
+        // Arrange
+        $data = $this->createUserWithPermission([
+            'time-entries:view:all',
+        ]);
+        $data->user->timezone = 'Europe/Rome';
+        $data->user->save();
+
+        $author = User::factory()->create([
+            'name' => 'Alice Worker',
+        ]);
+        $member = Member::factory()->forOrganization($data->organization)->forUser($author)->role(Role::Employee)->create();
+        $project = Project::factory()->forOrganization($data->organization)->create();
+        $task = Task::factory()->forOrganization($data->organization)->forProject($project)->create([
+            'name' => 'Inventory review',
+        ]);
+
+        TimeEntry::factory()->forMember($member)->forTask($task)->create([
+            'description' => 'Checked warehouse stock',
+            'start' => Carbon::create(2026, 4, 29, 9, 0, 0, 'Europe/Rome')->utc(),
+            'end' => Carbon::create(2026, 4, 29, 10, 0, 0, 'Europe/Rome')->utc(),
+        ]);
+        TimeEntry::factory()->forMember($data->member)->create([
+            'description' => 'Internal sync',
+            'task_id' => null,
+            'start' => Carbon::create(2026, 4, 29, 10, 0, 0, 'Europe/Rome')->utc(),
+            'end' => Carbon::create(2026, 4, 29, 11, 0, 0, 'Europe/Rome')->utc(),
+        ]);
+        TimeEntry::factory()->forMember($member)->forTask($task)->create([
+            'description' => 'Previous day work',
+            'start' => Carbon::create(2026, 4, 28, 23, 30, 0, 'Europe/Rome')->utc(),
+            'end' => Carbon::create(2026, 4, 29, 0, 30, 0, 'Europe/Rome')->utc(),
+        ]);
+
+        $otherData = $this->createUserWithPermission([
+            'time-entries:view:all',
+        ]);
+        TimeEntry::factory()->forMember($otherData->member)->create([
+            'description' => 'Other organization',
+            'start' => Carbon::create(2026, 4, 29, 9, 30, 0, 'Europe/Rome')->utc(),
+            'end' => Carbon::create(2026, 4, 29, 10, 30, 0, 'Europe/Rome')->utc(),
+        ]);
+
+        Passport::actingAs($data->user);
+
+        // Act
+        $response = $this->getJson(route('api.v1.time-entries.daily-activities', [
+            $data->organization->getKey(),
+            'date' => '2026-04-29',
+        ]));
+
+        // Assert
+        $this->assertResponseCode($response, 200);
+        $response->assertExactJson([
+            'data' => [
+                [
+                    'description' => 'Checked warehouse stock',
+                    'task' => 'Inventory review',
+                    'author' => 'Alice Worker',
+                    'start_time' => '09:00',
+                    'end_time' => '10:00',
+                ],
+                [
+                    'description' => 'Internal sync',
+                    'task' => null,
+                    'author' => $data->user->name,
+                    'start_time' => '10:00',
+                    'end_time' => '11:00',
+                ],
+            ],
+        ]);
+    }
 }
