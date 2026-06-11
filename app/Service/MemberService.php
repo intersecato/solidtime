@@ -194,7 +194,9 @@ class MemberService
             $user->save();
         }
 
-        $placeholderUser = $user->replicate();
+        $placeholderUser = $user->replicate([
+            'real_user_email',
+        ]);
         $placeholderUser->is_placeholder = true;
         $placeholderUser->current_team_id = $member->organization_id;
         $placeholderUser->save();
