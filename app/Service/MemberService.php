@@ -195,6 +195,7 @@ class MemberService
         }
 
         $placeholderUser = $user->replicate([
+            'oidc_sub',
             'real_user_email',
         ]);
         $placeholderUser->is_placeholder = true;

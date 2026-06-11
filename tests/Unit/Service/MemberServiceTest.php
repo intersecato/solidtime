@@ -68,6 +68,7 @@ class MemberServiceTest extends TestCaseWithDatabase
     {
         // Arrange
         $user = User::factory()->create();
+        $user->oidc_sub = 'atlantis|128';
         $user->setAttribute('real_user_email', $user->email);
         $organization = Organization::factory()->create();
         $member = Member::factory()->forOrganization($organization)->forUser($user)->role(Role::Employee)->create();
@@ -91,6 +92,7 @@ class MemberServiceTest extends TestCaseWithDatabase
         $projectMember->refresh();
         $placeholderUser = $member->user;
         $this->assertTrue($placeholderUser->is_placeholder);
+        $this->assertNull($placeholderUser->oidc_sub);
         $this->assertArrayNotHasKey('real_user_email', $placeholderUser->getAttributes());
         $this->assertSame(Role::Placeholder->value, $member->role);
         $this->assertSame($organization->getKey(), $member->organization_id);
