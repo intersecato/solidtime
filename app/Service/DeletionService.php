@@ -25,12 +25,9 @@ class DeletionService
 {
     private UserService $userService;
 
-    private MemberService $memberService;
-
-    public function __construct(UserService $userService, MemberService $memberService)
+    public function __construct(UserService $userService)
     {
         $this->userService = $userService;
-        $this->memberService = $memberService;
     }
 
     public function deleteOrganization(Organization $organization, bool $inTransaction = true, ?User $ignoreUser = null): void
@@ -165,7 +162,15 @@ class DeletionService
             if ($member->role === Role::Owner->value) {
                 $this->deleteOrganization($member->organization, false, $user);
             } else {
-                $this->memberService->makeMemberToPlaceholder($member, false);
+                TimeEntry::query()
+                    ->whereBelongsTo($member, 'member')
+                    ->delete();
+
+                ProjectMember::query()
+                    ->whereBelongsTo($member, 'member')
+                    ->delete();
+
+                $member->delete();
             }
         }
 

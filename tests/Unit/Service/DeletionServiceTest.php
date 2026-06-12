@@ -328,7 +328,7 @@ class DeletionServiceTest extends TestCaseWithDatabase
         );
     }
 
-    public function test_delete_user_deletes_owned_organizations_that_have_only_one_member_and_makes_makes_the_user_placeholder_in_not_owned_organizations(): void
+    public function test_delete_user_deletes_owned_organizations_that_have_only_one_member_and_removes_user_from_not_owned_organizations(): void
     {
         // Arrange
         $user = User::factory()->create();
@@ -346,7 +346,7 @@ class DeletionServiceTest extends TestCaseWithDatabase
 
         // Assert
         $this->assertDatabaseCount(Organization::class, 1);
-        $this->assertDatabaseCount(User::class, 2);
+        $this->assertDatabaseCount(User::class, 1);
         $this->assertDatabaseMissing(User::class, [
             'id' => $user->getKey(),
         ]);
@@ -354,7 +354,7 @@ class DeletionServiceTest extends TestCaseWithDatabase
             'id' => $otherUser->getKey(),
             'is_placeholder' => false,
         ]);
-        $this->assertDatabaseHas(User::class, [
+        $this->assertDatabaseMissing(User::class, [
             'is_placeholder' => true,
         ]);
         $this->assertDatabaseMissing(Organization::class, [
@@ -366,10 +366,11 @@ class DeletionServiceTest extends TestCaseWithDatabase
         $this->assertDatabaseMissing(Member::class, [
             'id' => $memberOwned->getKey(),
         ]);
-        $this->assertDatabaseHas(Member::class, [
+        $this->assertDatabaseMissing(Member::class, [
             'id' => $memberNotOwned->getKey(),
-            'organization_id' => $organizationNotOwned->getKey(),
-            'role' => Role::Placeholder->value,
+        ]);
+        $this->assertDatabaseMissing(TimeEntry::class, [
+            'member_id' => $memberNotOwned->getKey(),
         ]);
         Log::assertLoggedTimes(fn (LogEntry $log) => $log->level === 'debug'
             && $log->message === 'Start deleting user'
@@ -412,15 +413,14 @@ class DeletionServiceTest extends TestCaseWithDatabase
         $this->assertDatabaseHas(Organization::class, [
             'id' => $organizationOfA->getKey(),
         ]);
-        // The placeholder user should exist with current_team_id set to the org where they are a placeholder
-        $placeholderUser = User::query()->where('is_placeholder', true)->first();
-        $this->assertNotNull($placeholderUser);
-        $this->assertSame($organizationOfA->getKey(), $placeholderUser->current_team_id);
-        $this->assertDatabaseHas(Member::class, [
+        $this->assertDatabaseMissing(User::class, [
+            'is_placeholder' => true,
+        ]);
+        $this->assertDatabaseMissing(Member::class, [
             'id' => $memberBInOrgA->getKey(),
-            'user_id' => $placeholderUser->getKey(),
-            'organization_id' => $organizationOfA->getKey(),
-            'role' => Role::Placeholder->value,
+        ]);
+        $this->assertDatabaseMissing(TimeEntry::class, [
+            'member_id' => $memberBInOrgA->getKey(),
         ]);
     }
 }
